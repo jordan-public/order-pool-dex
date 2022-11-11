@@ -1,2 +1,3 @@
+chainlink/=lib/chainlink/integration-tests/contracts/ethereum/src/
 ds-test/=lib/forge-std/lib/ds-test/src/
 forge-std/=lib/forge-std/src/
