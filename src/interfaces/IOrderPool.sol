@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.13;
 
-contract IOrderPool {
+import "openzeppelin-contracts/token/ERC20/IERC20.sol";
+
+interface IOrderPool {
     function tokenA() external view returns (IERC20);
 
     function tokenB() external view returns (IERC20);
@@ -10,12 +12,27 @@ contract IOrderPool {
 
     function setReverse(IOrderPool _reversePool) external;
 
-    function getLatestPrice()
-        public
+    function convert(uint amountA) external view returns (uint amountB);
+
+    function convertAt(uint amountA, uint price)
+        external
         view
-        returns (int256 price, uint8 decimals);
+        returns (uint amountB);
 
-    function swap(uint256 amountA) public;
+    function proxyTransferFrom(
+        IERC20 token,
+        address from,
+        address to,
+        uint amount
+    ) external;
 
-    function withdraw() external returns (uint256 amountA, uint256 amountB);
+    function swap(uint amountA, uint sufficientOrderIndex) external;
+
+    function swapImmediately(
+        uint amountA,
+        address payTo,
+        uint sufficientOrderIndex
+    ) external returns (uint amountRemainingUnswapped);
+
+    function withdraw(uint rangeIndex) external returns (uint amountB);
 }

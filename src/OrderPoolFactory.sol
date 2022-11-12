@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.13;
 
+import "./OrderPool.sol";
+import "./interfaces/IOrderPoolFactory.sol";
+
 contract OrderPoolFactory is IOrderPoolFactory {
     address public owner;
 
@@ -11,7 +14,7 @@ contract OrderPoolFactory is IOrderPoolFactory {
         _;
     }
 
-    constructor() public {
+    constructor() {
         owner = msg.sender;
     }
 
@@ -23,7 +26,12 @@ contract OrderPoolFactory is IOrderPoolFactory {
         (pair, reverse) = (pairs[tokenA][tokenB], pairs[tokenB][tokenA]);
     }
 
-    function createPair(address tokenA, address tokenB) external onlyOwner {
+    function createPair(
+        address priceFeedAddress,
+        bool isPriceFeedInverse,
+        address tokenA,
+        address tokenB
+    ) external onlyOwner {
         require(
             tokenA != address(0) && tokenB != address(0) && tokenA != tokenB,
             "Identical or null tokens."
@@ -37,8 +45,18 @@ contract OrderPoolFactory is IOrderPoolFactory {
             address(0) == address(pairs[tokenB][tokenA]),
             "Reverse pair already exists."
         );
-        pairs[tokenA][tokenB] = new OrderPool(tokenA, tokenB);
-        pairs[tokenB][tokenA] = new OrderPool(tokenB, tokenA);
+        pairs[tokenA][tokenB] = new OrderPool(
+            priceFeedAddress,
+            isPriceFeedInverse,
+            tokenA,
+            tokenB
+        );
+        pairs[tokenB][tokenA] = new OrderPool(
+            priceFeedAddress,
+            !isPriceFeedInverse,
+            tokenB,
+            tokenA
+        );
         pairs[tokenA][tokenB].setReverse(IOrderPool(pairs[tokenB][tokenA]));
         pairs[tokenB][tokenA].setReverse(IOrderPool(pairs[tokenA][tokenB]));
     }
