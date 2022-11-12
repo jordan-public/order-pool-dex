@@ -1,7 +1,4 @@
-- Create a ChainLink test contract, test with forked chain.
-- Create a pool factory for pairs of assets
-- Create pool contract
-- Pricing via test contract
+- Deployment script
 - Execution via test contract
 - UI with moving pair price and showing stats and liquidity
 - Execution via UI

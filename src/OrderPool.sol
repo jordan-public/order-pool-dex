@@ -48,7 +48,8 @@ contract OrderPool is IOrderPool {
         address tokenAAddress,
         address tokenBAddress
     ) {
-        owner = IOrderPoolFactory(msg.sender).owner();
+        // owner = IOrderPoolFactory(msg.sender).owner();
+        owner = msg.sender;
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         tokenA = IERC20(tokenAAddress);
         tokenB = IERC20(tokenBAddress);
