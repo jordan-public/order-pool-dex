@@ -19,6 +19,11 @@ contract OrderPool is IOrderPool {
     uint256 tokenBDecimalsFactor;
     uint256 priceDecimalsFactor;
 
+    uint256 public feesToCollect; // = 0;
+    uint16 public constant FEE_DENOM = 10000;
+    uint16 public constant FEE_TAKER_TO_MAKER = 25; // 0.25%
+    uint16 public constant FEE_TAKER_TO_PROTOCOL = 5; // 0.05%
+
     struct OrderType {
         address owner;
         uint256 amountAToSwap;
@@ -52,7 +57,6 @@ contract OrderPool is IOrderPool {
         address tokenAAddress,
         address tokenBAddress
     ) {
-        // owner = IOrderPoolFactory(msg.sender).owner();
         owner = msg.sender;
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         tokenA = IERC20(tokenAAddress);
@@ -216,8 +220,16 @@ contract OrderPool is IOrderPool {
                 filledOrdersCummulativeAmount ==
                 amountA
         );
-        safeTransferFrom(tokenA, address(this), payTo, amountA);
         filledOrdersCummulativeAmount += amountA;
+        uint256 feeToProtocol = (amountA * FEE_TAKER_TO_PROTOCOL) / FEE_DENOM;
+        feesToCollect += feeToProtocol;
+        amountA -= feeToProtocol;
+        safeTransferFrom(
+            tokenA,
+            address(this),
+            payTo,
+            (amountA * (FEE_DENOM - FEE_TAKER_TO_MAKER - 1)) / FEE_DENOM
+        ); // Payout less to compensate for fees; the "- 1" compensates for rounding
         (, int256 price, , , ) = priceFeed.latestRoundData();
         orderRanges.push(OrderRange(sufficientOrderIndex, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
     }
@@ -274,6 +286,14 @@ contract OrderPool is IOrderPool {
                     msg.sender,
                     amountB
                 );
+                safeTransferFrom(
+                    tokenA,
+                    address(this),
+                    msg.sender,
+                    (((orders[orderId].amountAToSwap *
+                        (FEE_DENOM - FEE_TAKER_TO_PROTOCOL)) / FEE_DENOM) *
+                        FEE_TAKER_TO_MAKER) / FEE_DENOM
+                );
             }
             orders[orderId].amountAToSwap = 0; // In either case above
         }
@@ -303,5 +323,11 @@ contract OrderPool is IOrderPool {
                 sufficientOrderIndex
             )
         );
+    }
+
+    function withdrawFees(address payTo) external onlyOwner returns (uint256 collected) {
+        safeTransferFrom(tokenA, address(this), payTo, feesToCollect);
+        collected = feesToCollect;
+        feesToCollect = 0;
     }
 }

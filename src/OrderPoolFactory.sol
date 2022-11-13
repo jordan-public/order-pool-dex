@@ -19,7 +19,7 @@ contract OrderPoolFactory is IOrderPoolFactory {
     }
 
     function getPair(address tokenA, address tokenB)
-        external
+        public
         view
         returns (IOrderPool pair, IOrderPool reverse)
     {
@@ -59,5 +59,15 @@ contract OrderPoolFactory is IOrderPoolFactory {
         );
         pairs[tokenA][tokenB].setReverse(IOrderPool(pairs[tokenB][tokenA]));
         pairs[tokenB][tokenA].setReverse(IOrderPool(pairs[tokenA][tokenB]));
+    }
+
+    function withfrawFees(address tokenA, address tokenB)
+        external
+        onlyOwner
+        returns (uint256 feesACollected, uint256 feesBCollected)
+    {
+        (IOrderPool p, IOrderPool r) = getPair(tokenA, tokenB);
+        feesACollected = p.withdrawFees(msg.sender);
+        feesBCollected = r.withdrawFees(msg.sender);
     }
 }
