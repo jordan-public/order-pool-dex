@@ -17,4 +17,8 @@ interface IOrderPoolFactory {
         external
         view
         returns (IOrderPool pair, IOrderPool reverse);
+
+    function withfrawFees(address tokenA, address tokenB)
+        external
+        returns (uint256 feesACollected, uint256 feesBCollected);
 }
