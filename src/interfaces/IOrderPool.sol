@@ -12,6 +12,8 @@ interface IOrderPool {
 
     function setReverse(IOrderPool _reversePool) external;
 
+    function isPriceFeedInverse() external view returns (bool);
+
     function convert(uint amountA) external view returns (uint amountB);
 
     function convertAt(uint amountA, uint price)

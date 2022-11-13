@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.13;
 
+import "forge-std/console.sol";
 import "openzeppelin-contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import "chainlink/interfaces/AggregatorV3Interface.sol";
 import "./interfaces/IOrderPool.sol";
 import "./interfaces/IOrderPoolFactory.sol";
@@ -13,6 +15,8 @@ contract OrderPool is IOrderPool {
     bool public isPriceFeedInverse;
     IERC20 public tokenA;
     IERC20 public tokenB;
+    uint tokenADecimalsFactor;
+    uint tokenBDecimalsFactor;
     uint priceDecimalsFactor;
 
     struct OrderType {
@@ -53,8 +57,10 @@ contract OrderPool is IOrderPool {
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         tokenA = IERC20(tokenAAddress);
         tokenB = IERC20(tokenBAddress);
+        tokenADecimalsFactor = 10**ERC20(tokenAAddress).decimals();
+        tokenBDecimalsFactor = 10**ERC20(tokenBAddress).decimals();
         isPriceFeedInverse = _isPriceFeedInverse;
-        priceDecimalsFactor = 10 ^ priceFeed.decimals();
+        priceDecimalsFactor = 10**priceFeed.decimals();
     }
 
     function setReverse(IOrderPool _reversePool) external onlyOwner {
@@ -63,15 +69,17 @@ contract OrderPool is IOrderPool {
 
     function convert(uint amountA) public view returns (uint amountB) {
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        amountB = isPriceFeedInverse
-            ? (amountA * priceDecimalsFactor) / uint(price)
-            : (amountA * uint(price)) / priceDecimalsFactor;
+        amountB = convertAt(amountA, uint(price));
     }
 
     function convertAt(uint amountA, uint price) public view returns (uint amountB) {
+        console.log("Price: ", price);
         amountB = isPriceFeedInverse
-            ? (amountA * priceDecimalsFactor) / price
-            : (amountA * price) / priceDecimalsFactor;
+            ? (((amountA * priceDecimalsFactor) / price) * tokenBDecimalsFactor) / tokenADecimalsFactor
+            : (((amountA * price) / priceDecimalsFactor) * tokenBDecimalsFactor) / tokenADecimalsFactor;
+        console.log(ERC20(address(tokenA)).symbol(), " -> ", ERC20(address(tokenB)).symbol());
+        console.log("%s -> %s", amountA, amountB);
+
     }
 
     function safeTransferFrom(
