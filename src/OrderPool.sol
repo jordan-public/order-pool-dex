@@ -118,14 +118,37 @@ contract OrderPool is IOrderPool {
         safeTransferFrom(token, from, to, amount);
     }
 
-    function sufficientOrderIndexSearch() external view returns (uint256) {
-        return 0; // not yet implemented !!!
+    /// To be preferrably called from UI read-only
+    /// @param amountA - total amount to try to swap
+    function sufficientOrderIndexSearch(uint256 amountA)
+        external
+        view
+        returns (uint256)
+    {
+        assert(orders.length > 0); // As a sentinel is added in the constructor
+        if (
+            amountA >=
+            unfilledOrdersCummulativeAmount - filledOrdersCummulativeAmount
+        ) return orders.length - 1;
+        for (uint256 i = orders.length - 1; i > 0; i--) {
+            if (
+                amountA >=
+                orders[i].cumulativeOrdersAmount -
+                    filledOrdersCummulativeAmount &&
+                amountA <
+                orders[i - 1].cumulativeOrdersAmount -
+                    filledOrdersCummulativeAmount
+            ) return i;
+        }
+        assert(false);
+        return 0; // Unreachable code
     }
 
     /// Swap maximim amount possible
     /// @param amountA - total amount to try to swap
     /// @param payTo - the taker (who is not the caller, since this call is made from the reversePool)
-    /// @param sufficientOrderIndex - the index of the order which along with the lower indexed orders can fill the amount. Use sufficientOrderIndexSearch() to determine this value.
+    /// @param sufficientOrderIndex - the index of the order which along with the lower indexed orders can fill the maximim amount possible.
+    ///     Use sufficientOrderIndexSearch() to determine this value.
     ///     If this value is usurped by another order between the last call of sufficientOrderIndexSearch() and this call, this function should revert and it has to be tried again.
     ///     Improve this !!!
     /// @param amountRemainingUnswapped - the amount left unswapped which can be placed as Maker
@@ -194,8 +217,9 @@ contract OrderPool is IOrderPool {
                 amountA
         );
         safeTransferFrom(tokenA, address(this), payTo, amountA);
+        filledOrdersCummulativeAmount += amountA;
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        orderRanges.push(OrderRange(sufficientOrderIndex, uint256(price)));
+        orderRanges.push(OrderRange(sufficientOrderIndex, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
     }
 
     /// To be called from UI read-only
@@ -265,6 +289,11 @@ contract OrderPool is IOrderPool {
         );
     }
 
+    /// Swap maximim amount possible and place the remaining unfilled part of the order as Maker
+    /// @param amountA - total amount to try to swap
+    /// @param sufficientOrderIndex - the index of the order which along with the lower indexed orders can fill the maximim amount possible.
+    ///     Use sufficientOrderIndexSearch() to determine this value.
+    /// See swapImmediately()
     function swap(uint256 amountA, uint256 sufficientOrderIndex) public {
         safeTransferFrom(tokenA, msg.sender, address(this), amountA);
         make(
