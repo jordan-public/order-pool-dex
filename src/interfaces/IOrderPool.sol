@@ -14,27 +14,27 @@ interface IOrderPool {
 
     function isPriceFeedInverse() external view returns (bool);
 
-    function convert(uint amountA) external view returns (uint amountB);
+    function convert(uint256 amountA) external view returns (uint256 amountB);
 
-    function convertAt(uint amountA, uint price)
+    function convertAt(uint256 amountA, uint256 price)
         external
         view
-        returns (uint amountB);
+        returns (uint256 amountB);
 
     function proxyTransferFrom(
         IERC20 token,
         address from,
         address to,
-        uint amount
+        uint256 amount
     ) external;
 
-    function swap(uint amountA, uint sufficientOrderIndex) external;
+    function swap(uint256 amountA, uint256 sufficientOrderIndex) external;
 
     function swapImmediately(
-        uint amountA,
+        uint256 amountA,
         address payTo,
-        uint sufficientOrderIndex
-    ) external returns (uint amountRemainingUnswapped);
+        uint256 sufficientOrderIndex
+    ) external returns (uint256 amountRemainingUnswapped);
 
-    function withdraw(uint rangeIndex) external returns (uint amountB);
+    function withdraw(uint256 rangeIndex) external returns (uint256 amountB);
 }
