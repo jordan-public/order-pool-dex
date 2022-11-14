@@ -29,11 +29,9 @@ contract Deploy is Script {
 
         // createPair(ETH/USD chainlink feed, not inverse, WETH, USDC)
         factory.createPair(ORACLE_ETH_USD, false, WETH, USDC);
-        (IOrderPool p, IOrderPool r) = factory.getPair(WETH, USDC);
-        console.log("Pair deployed:");
-        console.log(ERC20(WETH).symbol(), "/", ERC20(USDC).symbol());
-        console.log("Pool: ", address(p));
-        console.log("Reverse Pool: ", address(r));
+        IOrderPool p = factory.getPair(factory.getNumPairs()-1); // Assuning no one runs this script concurrently 
+        console.log("Order Pool WETH/USDC deployed at:", address(p));
+        console.log("Reverse Order Pool USDC/WETH deployed at: ", address(p.reversePool()));
 
         vm.stopBroadcast();
     }

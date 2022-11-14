@@ -13,12 +13,11 @@ interface IOrderPoolFactory {
         address tokenBAddress
     ) external;
 
-    function getPair(address tokenAAddress, address tokenBAddress)
-        external
-        view
-        returns (IOrderPool pair, IOrderPool reverse);
+    function getNumPairs() external view returns (uint256);
 
-    function withfrawFees(address tokenA, address tokenB)
+    function getPair(uint256 id) external view returns (IOrderPool pair);
+
+    function withfrawFees(uint pairId)
         external
         returns (uint256 feesACollected, uint256 feesBCollected);
 }

@@ -7,7 +7,7 @@ import "./interfaces/IOrderPoolFactory.sol";
 contract OrderPoolFactory is IOrderPoolFactory {
     address public owner;
 
-    mapping(address => mapping(address => IOrderPool)) public pairs;
+    IOrderPool[] pairList;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "OrderPoolFactory: Unauthorized");
@@ -18,12 +18,12 @@ contract OrderPoolFactory is IOrderPoolFactory {
         owner = msg.sender;
     }
 
-    function getPair(address tokenA, address tokenB)
-        public
-        view
-        returns (IOrderPool pair, IOrderPool reverse)
-    {
-        (pair, reverse) = (pairs[tokenA][tokenB], pairs[tokenB][tokenA]);
+    function getNumPairs() external view returns (uint256) {
+        return pairList.length;
+    }
+
+    function getPair(uint256 id) external view returns (IOrderPool pair) {
+        return pairList[id];
     }
 
     function createPair(
@@ -37,37 +37,31 @@ contract OrderPoolFactory is IOrderPoolFactory {
             "Identical or null tokens."
         );
         // TODO: Check if tokens are ERC20
-        require(
-            address(0) == address(pairs[tokenA][tokenB]),
-            "Pair already exists."
-        );
-        require(
-            address(0) == address(pairs[tokenB][tokenA]),
-            "Reverse pair already exists."
-        );
-        pairs[tokenA][tokenB] = new OrderPool(
+
+        IOrderPool p = new OrderPool(
             priceFeedAddress,
             isPriceFeedInverse,
             tokenA,
             tokenB
         );
-        pairs[tokenB][tokenA] = new OrderPool(
+        IOrderPool r = new OrderPool(
             priceFeedAddress,
             !isPriceFeedInverse,
             tokenB,
             tokenA
         );
-        pairs[tokenA][tokenB].setReverse(IOrderPool(pairs[tokenB][tokenA]));
-        pairs[tokenB][tokenA].setReverse(IOrderPool(pairs[tokenA][tokenB]));
+        p.setReverse(r);
+        r.setReverse(p);
+        pairList.push(p); // Duplicates possible - no harm done
     }
 
-    function withfrawFees(address tokenA, address tokenB)
+    function withfrawFees(uint256 pairId)
         external
         onlyOwner
         returns (uint256 feesACollected, uint256 feesBCollected)
     {
-        (IOrderPool p, IOrderPool r) = getPair(tokenA, tokenB);
+        IOrderPool p = pairList[pairId];
         feesACollected = p.withdrawFees(msg.sender);
-        feesBCollected = r.withdrawFees(msg.sender);
+        feesBCollected = p.reversePool().withdrawFees(msg.sender);
     }
 }

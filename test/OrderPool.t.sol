@@ -29,17 +29,14 @@ contract OrderPoolTest is Test {
         );
 
         factory.createPair(ORACLE_ETH_USD, false, WETH, USDC);
-        (pool, reversePool) = factory.getPair(WETH, USDC);
-        console.log("Pair deployed:");
-        console.log(ERC20(WETH).symbol(), "/", ERC20(USDC).symbol());
-        console.log("Pool: ", address(pool));
-        console.log("Reverse Pool: ", address(reversePool));
-    }
+        console.log("WETH / USDC pair created.");
+   }
 
     function testPriceFeed() public {
-        uint256 amount = 10**ERC20(WETH).decimals();
+        uint256 amount = 10**18;
+        pool = factory.getPair(factory.getNumPairs()-1);
         assertApproxEqRel(
-            reversePool.convert(pool.convert(amount)),
+            pool.reversePool().convert(pool.convert(amount)),
             amount,
             10e15
         );
