@@ -10,7 +10,7 @@
 
 # production
 /build
-/src/artifacts
+/src/artifacts/*.json
 
 # misc
 .DS_Store
