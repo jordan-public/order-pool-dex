@@ -1,3 +1,2 @@
-- Fees implementation
 - UI with moving pair price and showing stats and liquidity
 - Execution via UI
