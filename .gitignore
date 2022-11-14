@@ -3,8 +3,8 @@ cache/
 out/
 bin/
 
+broadcast/Deploy.s.sol/1/*
 !broadcast/Deploy.s.sol/1/run-latest.json
-broadcast/
 # Ignores development broadcast logs
 # !/broadcast
 # /broadcast/*/31337/
