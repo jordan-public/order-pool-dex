@@ -2,7 +2,7 @@
 
 rm web/src/artifacts/*.json
 
-//Ignore errors
+# Ignore errors
 for dirname in out/*.sol; do
     cat $dirname/$(basename "$dirname" .sol).json | jq '{abi: .abi}' > web/src/artifacts/$(basename "$dirname" .sol).json
 done
