@@ -2,19 +2,25 @@
 
 import './App.css';
 import React from 'react';
-import { Card } from 'react-bootstrap';
+import { Container, Row, Col } from 'react-bootstrap';
 import NavigationBar from './components/NavigationBar';
+import SideBar from './components/SideBar';
 import Body from './components/Body';
 
 function App() {
   const [provider, setProvider] = React.useState(null);
   const [address, setAddress] = React.useState(null);
 
-  return (<Card><Card.Body>
-    <NavigationBar provider={provider} setProvider={setProvider} setAddress={setAddress}/>
-    <br />
-    { window.web3 && <Body provider={provider} address={address}/> }
-    </Card.Body></Card>);
+  return (<Container fluid>
+    <Row><Col>
+    <NavigationBar provider={provider} setProvider={setProvider} address={address} setAddress={setAddress}/>
+    </Col></Row>
+    <Row>
+    <Col xs>{window.web3 && <SideBar provider={provider} address={address} />}</Col>
+    <Col lg>{window.web3 && <Body provider={provider} address={address} />}</Col>
+    </Row>
+    
+  </Container >);
 }
 
 export default App;
