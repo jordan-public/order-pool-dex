@@ -33,7 +33,11 @@ contract OrderPool is IOrderPool {
     OrderType[] public orders;
     mapping(address => uint256) public orderOwned;
     uint256 filledOrdersCummulativeAmount;
-    uint256 unfilledOrdersCummulativeAmount;
+
+    function unfilledOrdersCummulativeAmount() internal view returns (uint256) {
+        if (orders.length == 0) return 0;
+        return orders[orders.length-1].cumulativeOrdersAmount;
+    }
 
     struct OrderRange {
         uint256 highIndex; // lowIndex = highIndex of previous OrderRange
@@ -142,7 +146,7 @@ contract OrderPool is IOrderPool {
         assert(orders.length > 0); // As a sentinel is added in the constructor
         if (
             amountA >=
-            unfilledOrdersCummulativeAmount - filledOrdersCummulativeAmount
+            unfilledOrdersCummulativeAmount() - filledOrdersCummulativeAmount
         ) return orders.length - 1;
         for (uint256 i = orders.length - 1; i > 0; i--) {
             if (
@@ -172,22 +176,22 @@ contract OrderPool is IOrderPool {
         uint256 sufficientOrderIndex
     ) external onlyReversePool returns (uint256 amountRemainingUnswapped) {
         assert(
-            unfilledOrdersCummulativeAmount >= filledOrdersCummulativeAmount
+            unfilledOrdersCummulativeAmount() >= filledOrdersCummulativeAmount
         );
-        if (unfilledOrdersCummulativeAmount == filledOrdersCummulativeAmount)
+        if (unfilledOrdersCummulativeAmount() == filledOrdersCummulativeAmount)
             return amountA; // Empty Order Pool - all is unswapped
         if (
             amountA >=
-            unfilledOrdersCummulativeAmount - filledOrdersCummulativeAmount
+            unfilledOrdersCummulativeAmount() - filledOrdersCummulativeAmount
         ) {
             // no need to require(sufficientOrderIndex == orders.length - 1) as another order may have usurped this
             sufficientOrderIndex = orders.length - 1;
             amountRemainingUnswapped = convert(
                 (amountA + filledOrdersCummulativeAmount) -
-                    unfilledOrdersCummulativeAmount
+                    unfilledOrdersCummulativeAmount()
             ); // extra parenthesis intended
             amountA =
-                unfilledOrdersCummulativeAmount -
+                unfilledOrdersCummulativeAmount() -
                 filledOrdersCummulativeAmount;
         } // else amountRemainingUnswapped = 0;
         // At this point amountA can be filled (swapped)
@@ -216,20 +220,16 @@ contract OrderPool is IOrderPool {
                 amountA;
             uint256 toPayOut = orders[sufficientOrderIndex].amountAToSwap -
                 toRemain;
-            unfilledOrdersCummulativeAmount -= toPayOut;
             orders[sufficientOrderIndex].amountAToSwap = toRemain;
             reversePool.proxyTransferFrom(
                 tokenB,
                 address(reversePool),
                 orders[sufficientOrderIndex].owner,
-                convert(toPayOut)
+                convert(toPayOut) // Maker pays no fees - payout the exact converted amount
             );
         }
-        assert(
-            orders[sufficientOrderIndex].cumulativeOrdersAmount -
-                filledOrdersCummulativeAmount ==
-                amountA
-        );
+        // At this point all orders up to and including sufficientOrderIndex-1 can withdraw
+        // ... but order[sufficientOrderIndex] cannot since it was partially filled and paid out above
         filledOrdersCummulativeAmount += amountA;
         uint256 feeToProtocol = (amountA * FEE_TAKER_TO_PROTOCOL) / FEE_DENOM;
         feesToCollect += feeToProtocol;
@@ -238,10 +238,10 @@ contract OrderPool is IOrderPool {
             tokenA,
             address(this),
             payTo,
-            (amountA * (FEE_DENOM - FEE_TAKER_TO_MAKER - 1)) / FEE_DENOM
-        ); // Payout less to compensate for fees; the "- 1" compensates for rounding
+            (amountA * (FEE_DENOM - FEE_TAKER_TO_MAKER - 1)) / FEE_DENOM // Payout less to compensate for fees; the "- 1" compensates for rounding
+        );
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        orderRanges.push(OrderRange(sufficientOrderIndex, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
+        orderRanges.push(OrderRange(sufficientOrderIndex-1, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
     }
 
     /// To be called from UI read-only
@@ -314,10 +314,9 @@ contract OrderPool is IOrderPool {
     /// Called only for the amount which cannot be swapped immediately
     /// @param amountA - the amount to be plaved in the pool as maker
     function make(uint256 amountA) internal {
-        unfilledOrdersCummulativeAmount += amountA;
         orderOwned[msg.sender] = orders.length;
         orders.push(
-            OrderType(msg.sender, amountA, unfilledOrdersCummulativeAmount)
+            OrderType(msg.sender, amountA, unfilledOrdersCummulativeAmount()+amountA)
         );
     }
 
