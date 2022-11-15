@@ -84,10 +84,8 @@ contract OrderPool is IOrderPool {
     {
         console.log("Price: ", price);
         amountB = isPriceFeedInverse
-            ? (((amountA * priceDecimalsFactor) / price) *
-                tokenBDecimalsFactor) / tokenADecimalsFactor
-            : (((amountA * price) / priceDecimalsFactor) *
-                tokenBDecimalsFactor) / tokenADecimalsFactor;
+            ? (amountA * priceDecimalsFactor * tokenBDecimalsFactor) / (price * tokenADecimalsFactor)
+            : (amountA * price * tokenBDecimalsFactor) / (priceDecimalsFactor * tokenADecimalsFactor);
         console.log(
             ERC20(address(tokenA)).symbol(),
             " -> ",

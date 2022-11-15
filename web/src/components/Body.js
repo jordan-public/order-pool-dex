@@ -2,12 +2,49 @@
 import React from 'react';
 import { Form, Accordion } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.css'; 
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
+import aIOrderPool from '../artifacts/IOrderPool.json';
+import aERC20 from '../artifacts/ERC20.json';
+import uint256ToDecimal from '../utils/uint256ToDecimal';
 
-function Body({provider,  address}) {
+function Body({provider, address, pair}) {
+    const [orderPool, setOrderPool] = React.useState(null);
+    const [reverseOrderPool, setReverseOrderPool] = React.useState(null);
+    const [tokenA, setTokenA] = React.useState(null);
+    const [tokenB, setTokenB] = React.useState(null);
+    const [tokenADecimals, setTokenADecimals] = React.useState(null);
+    const [tokenBDecimals, setTokenBDecimals] = React.useState(null);
+    const [priceAB, setPriceAB] = React.useState("");
+    const [priceBA, setPriceBA] = React.useState("");
 
+    React.useEffect(() => {
+        (async () => {
+            const signer = provider.getSigner();
+            const p = new ethers.Contract(pair.pair, aIOrderPool.abi, signer);
+            setOrderPool(p);
+            const r = new ethers.Contract(await p.reversePool(), aIOrderPool.abi, signer);
+            setReverseOrderPool(r);
+            const cTokenA = new ethers.Contract(await p.tokenA(), aERC20.abi, signer);
+            setTokenA(cTokenA);
+            const cTokenB = new ethers.Contract(await p.tokenB(), aERC20.abi, signer);
+            setTokenA(cTokenB);
+            const tokenADec = await cTokenA.decimals();
+            setTokenADecimals(tokenADec);
+            const tokenBDec = await cTokenB.decimals();
+            setTokenBDecimals(tokenBDec);
+            const oneA = BigNumber.from(10).pow(BigNumber.from(tokenADec));
+console.log(oneA);
+            const oneB = BigNumber.from(10).pow(BigNumber.from(tokenBDec));
+            setPriceAB(uint256ToDecimal(await p.convert(oneA), tokenBDec));
+            setPriceBA(uint256ToDecimal(await r.convert(oneB), tokenADec));
+         }) ();
+    }, [provider, address, pair]); // On load
+
+    if (!pair) return(<></>);
     return (<>
-BODY
+        {pair.SymbolA}/{pair.SymbolB}: {pair.pair}
+        <br/>
+        Price: {priceAB} = 1/{priceBA}
     </>);
 }
 
