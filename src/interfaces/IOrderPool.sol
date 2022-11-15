@@ -28,21 +28,26 @@ interface IOrderPool {
         uint256 amount
     ) external;
 
-    function swap(uint256 amountA, uint256 sufficientOrderIndex) external;
-
     function sufficientOrderIndexSearch(uint256 amountA)
         external
         view
         returns (uint256);
-        
+
+    function sufficientOrderIndexSearchRP(uint256 amountA)
+        external
+        view
+        returns (uint256);
+
     function swapImmediately(
         uint256 amountA,
         address payTo,
         uint256 sufficientOrderIndex
     ) external returns (uint256 amountRemainingUnswapped);
 
+    function swap(uint256 amountA, uint256 sufficientOrderIndex) external;
+
     function rangeIndexSearch() external view returns (uint256);
-    
+
     function withdraw(uint256 rangeIndex) external returns (uint256 amountB);
 
     function feesToCollect() external view returns (uint256);

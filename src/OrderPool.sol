@@ -84,8 +84,10 @@ contract OrderPool is IOrderPool {
     {
         console.log("Price: ", price);
         amountB = isPriceFeedInverse
-            ? (amountA * priceDecimalsFactor * tokenBDecimalsFactor) / (price * tokenADecimalsFactor)
-            : (amountA * price * tokenBDecimalsFactor) / (priceDecimalsFactor * tokenADecimalsFactor);
+            ? (amountA * priceDecimalsFactor * tokenBDecimalsFactor) /
+                (price * tokenADecimalsFactor)
+            : (amountA * price * tokenBDecimalsFactor) /
+                (priceDecimalsFactor * tokenADecimalsFactor);
         console.log(
             ERC20(address(tokenA)).symbol(),
             " -> ",
@@ -123,6 +125,16 @@ contract OrderPool is IOrderPool {
     /// To be preferrably called from UI read-only
     /// @param amountA - total amount to try to swap
     function sufficientOrderIndexSearch(uint256 amountA)
+        external
+        view
+        returns (uint256)
+    {
+        return reversePool.sufficientOrderIndexSearchRP(convert(amountA));
+    }
+
+    /// To be preferrably called from UI read-only
+    /// @param amountA - total amount to try to swap
+    function sufficientOrderIndexSearchRP(uint256 amountA)
         external
         view
         returns (uint256)
@@ -257,44 +269,46 @@ contract OrderPool is IOrderPool {
     /// @param rangeIndex - the index of the range (in the array of ranges) of executed entries which contains the execution price. To be determined by calling rangeIndexSearch()
     function withdraw(uint256 rangeIndex) external returns (uint256 amountB) {
         uint256 orderId = orderOwned[msg.sender];
-        if (orderId != 0) {
-            if (rangeIndex == type(uint256).max) {
-                // Has not executed, or executed partially and paid out the executed value
-                // Withdraw remaining unexecuted amount
-                safeTransferFrom(
-                    tokenA,
-                    address(this),
-                    msg.sender,
-                    orders[orderId].amountAToSwap
-                );
-            } else {
-                // Executed - pay out counter-value
-                require(
-                    (rangeIndex == 0 ||
-                        orderRanges[rangeIndex - 1].highIndex < orderId) &&
-                        orderRanges[rangeIndex].highIndex >= orderId
-                );
-                amountB = convertAt(
-                    orders[orderId].amountAToSwap,
-                    orderRanges[rangeIndex].executionPrice
-                );
-                reversePool.proxyTransferFrom(
-                    tokenB,
-                    address(reversePool),
-                    msg.sender,
-                    amountB
-                );
-                safeTransferFrom(
-                    tokenA,
-                    address(this),
-                    msg.sender,
-                    (((orders[orderId].amountAToSwap *
-                        (FEE_DENOM - FEE_TAKER_TO_PROTOCOL)) / FEE_DENOM) *
-                        FEE_TAKER_TO_MAKER) / FEE_DENOM
-                );
-            }
-            orders[orderId].amountAToSwap = 0; // In either case above
+        require(orderId != 0, "OrderPool: Non existent order");
+        if (rangeIndex == type(uint256).max) {
+            // Has not executed, or executed partially and paid out the executed value
+            // Withdraw remaining unexecuted amount
+            // !!! not allowed as it would trow off the calculations of available capital
+            // safeTransferFrom(
+            //     tokenA,
+            //     address(this),
+            //     msg.sender,
+            //     orders[orderId].amountAToSwap
+            // );
+            // Also would have to re-calculate unfilledOrdersCummulativeAmount
+            revert("OrderPool: Not allowed");
+        } else {
+            // Executed - pay out counter-value
+            require(
+                (rangeIndex == 0 ||
+                    orderRanges[rangeIndex - 1].highIndex < orderId) &&
+                    orderRanges[rangeIndex].highIndex >= orderId
+            );
+            amountB = convertAt(
+                orders[orderId].amountAToSwap,
+                orderRanges[rangeIndex].executionPrice
+            );
+            reversePool.proxyTransferFrom(
+                tokenB,
+                address(reversePool),
+                msg.sender,
+                amountB
+            );
+            safeTransferFrom(
+                tokenA,
+                address(this),
+                msg.sender,
+                (((orders[orderId].amountAToSwap *
+                    (FEE_DENOM - FEE_TAKER_TO_PROTOCOL)) / FEE_DENOM) *
+                    FEE_TAKER_TO_MAKER) / FEE_DENOM
+            );
         }
+        orders[orderId].amountAToSwap = 0; // In either case above
     }
 
     /// Called only for the amount which cannot be swapped immediately
@@ -323,7 +337,11 @@ contract OrderPool is IOrderPool {
         );
     }
 
-    function withdrawFees(address payTo) external onlyOwner returns (uint256 collected) {
+    function withdrawFees(address payTo)
+        external
+        onlyOwner
+        returns (uint256 collected)
+    {
         safeTransferFrom(tokenA, address(this), payTo, feesToCollect);
         collected = feesToCollect;
         feesToCollect = 0;
