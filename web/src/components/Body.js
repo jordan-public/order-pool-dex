@@ -40,6 +40,15 @@ console.log(oneA);
          }) ();
     }, [provider, address, pair]); // On load
 
+    React.useEffect(() => {
+        if (provider) {
+            provider.on("block", (blockNumber) => {
+            console.log(blockNumber);
+            });
+            return () => provider.off("block");
+        }
+    }, [provider]);
+
     if (!pair) return(<></>);
     return (<>
         {pair.SymbolA}/{pair.SymbolB}: {pair.pair}
