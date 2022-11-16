@@ -18,6 +18,8 @@ function Body({provider, address, pair}) {
 
     const [amountA, setAmountA] = React.useState(BigNumber.from(0));
     const [estAmountB, setEstAmountB] = React.useState(BigNumber.from(0));
+    const [poolSizeA, setPoolSizeA] = React.useState(BigNumber.from(0));
+    const [poolSizeB, setPoolSizeB] = React.useState(BigNumber.from(0));
 
     React.useEffect(() => {
         (async () => {
@@ -44,11 +46,13 @@ function Body({provider, address, pair}) {
     const doUpdate = async (amtA, p, r, tokenADec, tokenBDec) => {
         if (!tokenADec || !tokenBDec) return;
         setEstAmountB(await p.convert(amtA));
+        setPoolSizeA(await p.poolSize());
+        setPoolSizeB(await r.poolSize());
     }
 
     const onUpdate = async (blockNumber) => {
 console.log(blockNumber, tokenADecimals, tokenBDecimals);
-        await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);    
+        await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
     }
 
     React.useEffect(() => {
@@ -91,13 +95,13 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
                         </InputGroup>
                         <Form.Text>Estimated gross {pair.SymbolB} amount: {uint256ToDecimal(estAmountB, tokenBDecimals)}</Form.Text>
                         <br/>
-                        <Form.Text>Estimated protocol fee: </Form.Text>
+                        <Form.Text>Estimated protocol fee: (0.05%)</Form.Text>
                         <br/>
-                        <Form.Text>Estimated taker fee: </Form.Text>
+                        <Form.Text>Estimated taker fee: (0.25%)</Form.Text>
                         <br/>
-                        <Form.Text>{pair.SymbolA} waiting to swap: </Form.Text>
+                        <Form.Text>{pair.SymbolA} waiting to swap: {uint256ToDecimal(poolSizeA, tokenADecimals)}</Form.Text>
                         <br/>
-                        <Form.Text>{pair.SymbolB} available immediately: </Form.Text>
+                        <Form.Text>{pair.SymbolB} available immediately: {uint256ToDecimal(poolSizeB, tokenBDecimals)}</Form.Text>
                         </Form>
                     </Card.Body>
                 </Card></Col>

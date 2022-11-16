@@ -39,6 +39,10 @@ contract OrderPool is IOrderPool {
         return orders[orders.length-1].cumulativeOrdersAmount;
     }
 
+    function poolSize() external view returns (uint256) {
+        return unfilledOrdersCummulativeAmount() - filledOrdersCummulativeAmount;
+    }
+
     struct OrderRange {
         uint256 highIndex; // lowIndex = highIndex of previous OrderRange
         uint256 executionPrice;

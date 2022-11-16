@@ -14,6 +14,8 @@ interface IOrderPool {
 
     function isPriceFeedInverse() external view returns (bool);
 
+    function poolSize() external view returns (uint256);
+    
     function convert(uint256 amountA) external view returns (uint256 amountB);
 
     function convertAt(uint256 amountA, uint256 price)
