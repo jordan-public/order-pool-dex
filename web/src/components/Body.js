@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 import React from 'react';
-import { Form, Accordion } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, InputGroup, Button } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.css'; 
 import { BigNumber, ethers } from 'ethers';
 import aIOrderPool from '../artifacts/IOrderPool.json';
 import aERC20 from '../artifacts/ERC20.json';
 import uint256ToDecimal from '../utils/uint256ToDecimal';
+import decimalToUint256 from '../utils/decimalToUint256';
 
 function Body({provider, address, pair}) {
     const [orderPool, setOrderPool] = React.useState(null);
@@ -14,8 +15,9 @@ function Body({provider, address, pair}) {
     const [tokenB, setTokenB] = React.useState(null);
     const [tokenADecimals, setTokenADecimals] = React.useState(null);
     const [tokenBDecimals, setTokenBDecimals] = React.useState(null);
-    const [priceAB, setPriceAB] = React.useState("");
-    const [priceBA, setPriceBA] = React.useState("");
+
+    const [amountA, setAmountA] = React.useState(BigNumber.from(0));
+    const [estAmountB, setEstAmountB] = React.useState(BigNumber.from(0));
 
     React.useEffect(() => {
         (async () => {
@@ -33,20 +35,20 @@ function Body({provider, address, pair}) {
             setTokenADecimals(tokenADec);
             const tokenBDec = await cTokenB.decimals();
             setTokenBDecimals(tokenBDec);
-            await doUpdate(p, r, tokenADec, tokenBDec);
+            const aInit = BigNumber.from(10).pow(tokenADec);
+            setAmountA(aInit);
+            await doUpdate(aInit, p, r, tokenADec, tokenBDec);
           }) ();
     }, [provider, address, pair]); // On load
 
-    const doUpdate = async (p, r, tokenADec, tokenBDec) => {
+    const doUpdate = async (amtA, p, r, tokenADec, tokenBDec) => {
         if (!tokenADec || !tokenBDec) return;
-        const oneA = BigNumber.from(10).pow(BigNumber.from(tokenADec));
-        const oneB = BigNumber.from(10).pow(BigNumber.from(tokenBDec));
-        setPriceAB(uint256ToDecimal(await p.convert(oneA), tokenBDec));
-        setPriceBA(uint256ToDecimal(await r.convert(oneB), tokenADec));
+        setEstAmountB(await p.convert(amtA));
     }
 
-    const onUpdate = async (blockNumber) => {console.log(blockNumber, tokenADecimals, tokenBDecimals);
-        await doUpdate(orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);    console.log("NB Update ok");
+    const onUpdate = async (blockNumber) => {
+console.log(blockNumber, tokenADecimals, tokenBDecimals);
+        await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);    
     }
 
     React.useEffect(() => {
@@ -56,13 +58,53 @@ function Body({provider, address, pair}) {
         }
     }); // Run on each render because onUpdate is a closure
 
+    const onChangeAmount = async (e) => {
+        const a = BigNumber.from(decimalToUint256(parseFloat(e.currentTarget.value), tokenADecimals));
+        setAmountA(a);
+        await doUpdate(a, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
+    }
+
     if (!provider || !pair) return(<></>);
     return (<>
         {pair.SymbolA}/{pair.SymbolB}: {pair.pair}
         <br/>
-        Price: {priceAB} = 1/{priceBA}
+        Amount A: {amountA.toString()}
         <br/>
-        TD: {tokenADecimals}, {tokenBDecimals}
+        Est Amount B: {estAmountB.toString()}
+        <Container fluid>
+            <Row></Row>
+            <Row>
+                <Col></Col>
+                <Col><Card border="primary" bg="light" style={{ width: '25rem' }}>
+                    <Card.Header>{pair.SymbolA} -> {pair.SymbolB}</Card.Header>
+                    <Card.Body>
+                        <Form>
+                        <InputGroup className="mb-3">
+                            <InputGroup.Text>Amount: {pair.SymbolA}</InputGroup.Text>
+                            <Form.Control type="number" onChange={onChangeAmount}/>
+                            <Button variant="primary">Swap -></Button>
+                        </InputGroup>
+                        <InputGroup className="mb-3">
+                            <InputGroup.Text>Unclaimed: {pair.SymbolB}</InputGroup.Text>
+                            <Form.Control readOnly="true" />
+                            <Button variant="success">Withdraw</Button>
+                        </InputGroup>
+                        <Form.Text>Estimated gross {pair.SymbolB} amount: {uint256ToDecimal(estAmountB, tokenBDecimals)}</Form.Text>
+                        <br/>
+                        <Form.Text>Estimated protocol fee: </Form.Text>
+                        <br/>
+                        <Form.Text>Estimated taker fee: </Form.Text>
+                        <br/>
+                        <Form.Text>{pair.SymbolA} waiting to swap: </Form.Text>
+                        <br/>
+                        <Form.Text>{pair.SymbolB} available immediately: </Form.Text>
+                        </Form>
+                    </Card.Body>
+                </Card></Col>
+                <Col></Col>
+            </Row>
+            <Row></Row>
+        </Container>
     </>);
 }
 
