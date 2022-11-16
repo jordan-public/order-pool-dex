@@ -23,6 +23,7 @@ function SideBar({provider,  address, setPair}) {
 
     React.useEffect(() => {
         (async () => {
+            if (!provider) return;
             const signer = provider.getSigner();
             const cOrderPoolFactory = new ethers.Contract(aOrderPoolFactory.contractAddress, aOrderPoolFactory.abi, signer);
             const numPairs = (await cOrderPoolFactory.getNumPairs()).toNumber();
@@ -38,6 +39,7 @@ function SideBar({provider,  address, setPair}) {
         }) ();
     }, [provider, address]); // On load
 
+    if (!provider) return;
     return (<div className="d-grid gap-2">
         {pairList.map((p) => <Button key={p.pair} size="sm" onClick={()=>setPair(p)}>{p.SymbolA}/{p.SymbolB}</Button>)}
     </div>);

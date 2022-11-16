@@ -19,6 +19,7 @@ function Body({provider, address, pair}) {
 
     React.useEffect(() => {
         (async () => {
+            if (!provider || !pair) return;console.log("UE1 - ok")
             const signer = provider.getSigner();
             const p = new ethers.Contract(pair.pair, aIOrderPool.abi, signer);
             setOrderPool(p);
@@ -32,27 +33,36 @@ function Body({provider, address, pair}) {
             setTokenADecimals(tokenADec);
             const tokenBDec = await cTokenB.decimals();
             setTokenBDecimals(tokenBDec);
-            const oneA = BigNumber.from(10).pow(BigNumber.from(tokenADec));
-            const oneB = BigNumber.from(10).pow(BigNumber.from(tokenBDec));
-            setPriceAB(uint256ToDecimal(await p.convert(oneA), tokenBDec));
-            setPriceBA(uint256ToDecimal(await r.convert(oneB), tokenADec));
-         }) ();
+            await doUpdate(p, r, tokenADec, tokenBDec);
+          }) ();
     }, [provider, address, pair]); // On load
+
+    const doUpdate = async (p, r, tokenADec, tokenBDec) => {
+        if (!tokenADec || !tokenBDec) return;
+        const oneA = BigNumber.from(10).pow(BigNumber.from(tokenADec));
+        const oneB = BigNumber.from(10).pow(BigNumber.from(tokenBDec));
+        setPriceAB(uint256ToDecimal(await p.convert(oneA), tokenBDec));
+        setPriceBA(uint256ToDecimal(await r.convert(oneB), tokenADec));
+    }
+
+    const onUpdate = async (blockNumber) => {console.log(blockNumber, tokenADecimals, tokenBDecimals);
+        await doUpdate(orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);    console.log("NB Update ok");
+    }
 
     React.useEffect(() => {
         if (provider) {
-            provider.on("block", (blockNumber) => {
-                console.log(blockNumber);
-            });
+            provider.on("block", onUpdate);
             return () => provider.off("block");
         }
-    }, [provider]);
+    }); // Run on each render because onUpdate is a closure
 
-    if (!pair) return(<></>);
+    if (!provider || !pair) return(<></>);
     return (<>
         {pair.SymbolA}/{pair.SymbolB}: {pair.pair}
         <br/>
         Price: {priceAB} = 1/{priceBA}
+        <br/>
+        TD: {tokenADecimals}, {tokenBDecimals}
     </>);
 }
 
