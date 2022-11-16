@@ -33,7 +33,6 @@ function Body({provider, address, pair}) {
             const tokenBDec = await cTokenB.decimals();
             setTokenBDecimals(tokenBDec);
             const oneA = BigNumber.from(10).pow(BigNumber.from(tokenADec));
-console.log(oneA);
             const oneB = BigNumber.from(10).pow(BigNumber.from(tokenBDec));
             setPriceAB(uint256ToDecimal(await p.convert(oneA), tokenBDec));
             setPriceBA(uint256ToDecimal(await r.convert(oneB), tokenADec));
@@ -43,7 +42,7 @@ console.log(oneA);
     React.useEffect(() => {
         if (provider) {
             provider.on("block", (blockNumber) => {
-            console.log(blockNumber);
+                console.log(blockNumber);
             });
             return () => provider.off("block");
         }
