@@ -20,6 +20,8 @@ function Body({provider, address, pair}) {
     const [estAmountB, setEstAmountB] = React.useState(BigNumber.from(0));
     const [poolSizeA, setPoolSizeA] = React.useState(BigNumber.from(0));
     const [poolSizeB, setPoolSizeB] = React.useState(BigNumber.from(0));
+    const [sufficientOrderIndex, setSufficientOrderIndex] = React.useState(BigNumber.from(0));
+    const [orderStatus, setOrderStatus] = React.useState(null);
 
     React.useEffect(() => {
         (async () => {
@@ -48,6 +50,8 @@ function Body({provider, address, pair}) {
         setEstAmountB(await p.convert(amtA));
         setPoolSizeA(await p.poolSize());
         setPoolSizeB(await r.poolSize());
+        setSufficientOrderIndex(await p.sufficientOrderIndexSearch(amtA));
+        setOrderStatus(await p.orderStatus());
     }
 
     const onUpdate = async (blockNumber) => {
@@ -68,6 +72,38 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
         await doUpdate(a, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
     }
 
+    const onSwap = async () => {
+        if (!orderStatus) return;
+        if (orderStatus[1] == 0 && orderStatus[2] == 0 && orderStatus[2] != ethers.constants.MaxUint256) return;
+        try {
+            const tx = await orderPool.swap(amountA, sufficientOrderIndex);
+
+            const r = await tx.wait();
+            await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
+            window.alert('Completed. Block hash: ' + r.blockHash);        
+        } catch(e) {
+            console.log("Error: ", e);
+            window.alert(e.message + "\n" + (e.data?e.data.message:""));
+            return;
+        }
+    }
+    
+    const onWithdraw = async () => {
+        if (!orderStatus) return;
+        if (orderStatus[2] == ethers.constants.MaxUint256) return;
+        try {
+            const tx = await orderPool.withdraw(orderStatus[2]);
+
+            const r = await tx.wait();
+            await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
+            window.alert('Completed. Block hash: ' + r.blockHash);        
+        } catch(e) {
+            console.log("Error: ", e);
+            window.alert(e.message + "\n" + (e.data?e.data.message:""));
+            return;
+        }
+    }
+
     if (!provider || !pair) return(<></>);
     return (<>
         {pair.SymbolA}/{pair.SymbolB}: {pair.pair}
@@ -75,6 +111,11 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
         Amount A: {amountA.toString()}
         <br/>
         Est Amount B: {estAmountB.toString()}
+        <br/>
+        sufficientOrderIndex: {sufficientOrderIndex.toString()}
+        <br/>
+        rangeIndex: {orderStatus && orderStatus[2].toString()}
+        <br/><br/>
         <Container fluid>
             <Row></Row>
             <Row>
@@ -86,13 +127,19 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
                         <InputGroup className="mb-3">
                             <InputGroup.Text>Amount: {pair.SymbolA}</InputGroup.Text>
                             <Form.Control type="number" onChange={onChangeAmount}/>
-                            <Button variant="primary">Swap -></Button>
+                            <Button variant="primary" onClick={onSwap}>Swap -></Button>
                         </InputGroup>
                         <InputGroup className="mb-3">
                             <InputGroup.Text>Unclaimed: {pair.SymbolB}</InputGroup.Text>
-                            <Form.Control readOnly="true" />
-                            <Button variant="success">Withdraw</Button>
+                            <Form.Control readOnly={true} />
+                            <Button variant="success" onClick={onWithdraw}>Withdraw</Button>
                         </InputGroup>
+                        {orderStatus && orderStatus[2] != ethers.constants.MaxUint256 && <>
+                            <Form.Text>Remaining unexecuted amount of {pair.SymbolA} amount: {uint256ToDecimal(orderStatus[0], tokenADecimals)}</Form.Text>
+                            <br/>
+                            <Form.Text>Remaining uncollected executed amount of {pair.SymbolB} amount: {uint256ToDecimal(orderStatus[1], tokenBDecimals)}</Form.Text>
+                            <br/>
+                        </>}
                         <Form.Text>Estimated gross {pair.SymbolB} amount: {uint256ToDecimal(estAmountB, tokenBDecimals)}</Form.Text>
                         <br/>
                         <Form.Text>Estimated protocol fee: (0.05%)</Form.Text>

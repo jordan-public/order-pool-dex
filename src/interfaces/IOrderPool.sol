@@ -15,7 +15,7 @@ interface IOrderPool {
     function isPriceFeedInverse() external view returns (bool);
 
     function poolSize() external view returns (uint256);
-    
+
     function convert(uint256 amountA) external view returns (uint256 amountB);
 
     function convertAt(uint256 amountA, uint256 price)
@@ -48,7 +48,14 @@ interface IOrderPool {
 
     function swap(uint256 amountA, uint256 sufficientOrderIndex) external;
 
-    function rangeIndexSearch() external view returns (uint256);
+    function orderStatus()
+        external
+        view
+        returns (
+            uint256 remainingA,
+            uint256 remainingB,
+            uint256 rangeIndex
+        );
 
     function withdraw(uint256 rangeIndex) external returns (uint256 amountB);
 

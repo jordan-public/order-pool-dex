@@ -36,11 +36,12 @@ contract OrderPool is IOrderPool {
 
     function unfilledOrdersCummulativeAmount() internal view returns (uint256) {
         if (orders.length == 0) return 0;
-        return orders[orders.length-1].cumulativeOrdersAmount;
+        return orders[orders.length - 1].cumulativeOrdersAmount;
     }
 
     function poolSize() external view returns (uint256) {
-        return unfilledOrdersCummulativeAmount() - filledOrdersCummulativeAmount;
+        return
+            unfilledOrdersCummulativeAmount() - filledOrdersCummulativeAmount;
     }
 
     struct OrderRange {
@@ -245,16 +246,17 @@ contract OrderPool is IOrderPool {
             (amountA * (FEE_DENOM - FEE_TAKER_TO_MAKER - 1)) / FEE_DENOM // Payout less to compensate for fees; the "- 1" compensates for rounding
         );
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        orderRanges.push(OrderRange(sufficientOrderIndex-1, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
+        orderRanges.push(OrderRange(sufficientOrderIndex - 1, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
     }
 
     /// To be called from UI read-only
-    function rangeIndexSearch() external view returns (uint256) {
+    function rangeIndexSearch() internal view returns (uint256) {
         uint256 orderId = orderOwned[msg.sender];
         if (
+            orderId == 0 ||
             orderRanges.length == 0 ||
             orderRanges[orderRanges.length - 1].highIndex < orderId
-        ) return type(uint256).max; // Not yet executed
+        ) return type(uint256).max; // Not yet executed or non-exsistent
         if (orderRanges.length == 1) {
             assert(orderRanges[0].highIndex >= orderId);
             return 0;
@@ -267,6 +269,33 @@ contract OrderPool is IOrderPool {
         }
         assert(false);
         return 0; // Unreachable code
+    }
+
+    function orderStatus()
+        external
+        view
+        returns (
+            uint256 remainingA,
+            uint256 remainingB,
+            uint256 rangeIndex
+        )
+    {
+        uint256 orderId = orderOwned[msg.sender];
+        if (orderId == 0) return (0, 0, type(uint256).max); // Non-existent
+        remainingA = orders[orderId].amountAToSwap; // otherwise 0 as initialized
+        rangeIndex = rangeIndexSearch();
+        if (rangeIndex == type(uint256).max)
+            remainingA = orders[orderId].amountAToSwap;
+        else {
+            // otherwise remainingB = 0 as initialized
+            remainingB = convertAt(
+                orders[orderId].amountAToSwap,
+                orderRanges[rangeIndex].executionPrice
+            );
+            // Do not report: remainingA = (((orders[orderId].amountAToSwap *
+            //         (FEE_DENOM - FEE_TAKER_TO_PROTOCOL)) / FEE_DENOM) *
+            //         FEE_TAKER_TO_MAKER) / FEE_DENOM; // Fees to collect
+        }
     }
 
     /// Withdraw both the filled and unfilled part of the order
@@ -313,6 +342,9 @@ contract OrderPool is IOrderPool {
             );
         }
         orders[orderId].amountAToSwap = 0; // In either case above
+        // Wipe order
+        delete orders[orderId]; // Get gas credit
+        orderOwned[msg.sender] = 0; // To avoid unnecessary exhaustive searches
     }
 
     /// Called only for the amount which cannot be swapped immediately
@@ -320,7 +352,11 @@ contract OrderPool is IOrderPool {
     function make(uint256 amountA) internal {
         orderOwned[msg.sender] = orders.length;
         orders.push(
-            OrderType(msg.sender, amountA, unfilledOrdersCummulativeAmount()+amountA)
+            OrderType(
+                msg.sender,
+                amountA,
+                unfilledOrdersCummulativeAmount() + amountA
+            )
         );
     }
 
