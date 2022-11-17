@@ -237,6 +237,7 @@ console.log("to: %s amount: %s", to, amount);
             uint256 toPayOutA = orders[sufficientOrderIndex].amountAToSwap -
                 toRemainA;
             orders[sufficientOrderIndex].amountAToSwap = toRemainA;
+            sufficientOrderIndex--; // Did not fully fill the order at this index
 console.log("swap immediately counterparty");
             reversePool.proxyTransfer(
                 tokenB,
@@ -257,7 +258,7 @@ console.log("swap immediately xfer");
             (amountA * (FEE_DENOM - FEE_TAKER_TO_MAKER - 1)) / FEE_DENOM // Payout less to compensate for fees; the "- 1" compensates for rounding
         );
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        orderRanges.push(OrderRange(sufficientOrderIndex - 1, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
+        orderRanges.push(OrderRange(sufficientOrderIndex, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
     }
 
     /// To be called from UI read-only
