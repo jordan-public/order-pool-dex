@@ -23,9 +23,8 @@ interface IOrderPool {
         view
         returns (uint256 amountB);
 
-    function proxyTransferFrom(
+    function proxyTransfer(
         IERC20 token,
-        address from,
         address to,
         uint256 amount
     ) external;

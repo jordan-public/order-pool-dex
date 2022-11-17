@@ -50,13 +50,9 @@ contract Deploy is Script {
         // Create 2 tokens
         Token JETH = new Token("JETH", 100 * 10**18); // 100 JETH
         console.log("Token JETH address: ", address(JETH));
-        // Re-start Anvil before deploying to deterministically deploy at
-        // Token JETH address:  0xe70fc4dbE4b655DD80FE6C02e0E9C5d3215420Ef
 
         Token JUSD = new Token("JUSD", 100000 * 10**18); // 100,000 JUSD
         console.log("Token JUSD address: ", address(JUSD));
-        // Re-start Anvil before deploying to deterministically deploy at
-        // Token JUSD address:  0xCD4ee20B85dd044742a2Ef1627E09b371D785286
   
         // Fund accounts 2, 3, 4 and 5 for experimentation
         JETH.transfer(account1, 25 * 10**18);

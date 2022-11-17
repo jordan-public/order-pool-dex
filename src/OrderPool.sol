@@ -98,30 +98,49 @@ contract OrderPool is IOrderPool {
                 (priceDecimalsFactor * tokenADecimalsFactor);
     }
 
+    // To cover "transfer" calls which return bool and/or revert
+    function safeTransfer(
+        IERC20 token,
+        address to,
+        uint256 amount
+    ) internal {
+console.log("safeTransfer caller: %s token: %s", msg.sender, address(token));
+console.log("to: %s amount: %s", to, amount);
+        // bytes4(keccak256(bytes('transfer(address,uint256)')));
+        (bool success, bytes memory data) = address(token).call(abi.encodeWithSelector(0xa9059cbb, to, amount));
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "OrderPool: transfer failed"
+        );
+    }
+
+    // To cover "transfer" calls which return bool and/or revert
     function safeTransferFrom(
         IERC20 token,
         address from,
         address to,
-        uint256 value
+        uint256 amount
     ) internal {
+console.log("safeTransferFrom caller: %s token: %s", msg.sender, address(token));
+console.log("from: %s to: %s amount: %s", from, to, amount);
         // bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
         (bool success, bytes memory data) = address(token).call(
-            abi.encodeWithSelector(0x23b872dd, from, to, value)
+            abi.encodeWithSelector(0x23b872dd, from, to, amount)
         );
         require(
             success && (data.length == 0 || abi.decode(data, (bool))),
-            "OrderPool: Transfer failed"
+            "OrderPool: transferFrom failed"
         );
     }
 
-    function proxyTransferFrom(
+    function proxyTransfer(
         IERC20 token,
-        address from,
         address to,
         uint256 amount
     ) external onlyReversePool {
-        require(from == address(this), "OrderPool: Unauthorized");
-        safeTransferFrom(token, from, to, amount);
+console.log("proxyTransfer caller: %s token: %s", msg.sender, address(tokenA));
+console.log("to: %s amount: %s", to, amount);
+        safeTransfer(token, to, amount);
     }
 
     /// To be preferrably called from UI read-only
@@ -218,9 +237,9 @@ contract OrderPool is IOrderPool {
             uint256 toPayOutA = orders[sufficientOrderIndex].amountAToSwap -
                 toRemainA;
             orders[sufficientOrderIndex].amountAToSwap = toRemainA;
-            reversePool.proxyTransferFrom(
+console.log("swap immediately counterparty");
+            reversePool.proxyTransfer(
                 tokenB,
-                address(reversePool),
                 orders[sufficientOrderIndex].owner,
                 convert(toPayOutA) // Maker pays no fees - payout the exact converted amount
             );
@@ -231,9 +250,9 @@ contract OrderPool is IOrderPool {
         uint256 feeToProtocol = (amountA * FEE_TAKER_TO_PROTOCOL) / FEE_DENOM;
         feesToCollect += feeToProtocol;
         amountA -= feeToProtocol;
-        safeTransferFrom(
+console.log("swap immediately xfer");
+        safeTransfer(
             tokenA,
-            address(this),
             payTo,
             (amountA * (FEE_DENOM - FEE_TAKER_TO_MAKER - 1)) / FEE_DENOM // Payout less to compensate for fees; the "- 1" compensates for rounding
         );
@@ -298,9 +317,8 @@ contract OrderPool is IOrderPool {
             // Has not executed, or executed partially and paid out the executed value
             // Withdraw remaining unexecuted amount
             // !!! not allowed as it would trow off the calculations of available capital
-            // safeTransferFrom(
+            // safeTransfer(
             //     tokenA,
-            //     address(this),
             //     msg.sender,
             //     orders[orderId].amountAToSwap
             // );
@@ -317,15 +335,15 @@ contract OrderPool is IOrderPool {
                 orders[orderId].amountAToSwap,
                 orderRanges[rangeIndex].executionPrice
             );
-            reversePool.proxyTransferFrom(
+console.log("withdraw xfer");
+            reversePool.proxyTransfer(
                 tokenB,
-                address(reversePool),
                 msg.sender,
                 amountB
             );
-            safeTransferFrom(
+console.log("withdraw xfer fees");
+            safeTransfer(
                 tokenA,
-                address(this),
                 msg.sender,
                 (((orders[orderId].amountAToSwap *
                     (FEE_DENOM - FEE_TAKER_TO_PROTOCOL)) / FEE_DENOM) *
@@ -357,6 +375,7 @@ contract OrderPool is IOrderPool {
     ///     Use sufficientOrderIndexSearch() to determine this value.
     /// See swapImmediately()
     function swap(uint256 amountA, uint256 sufficientOrderIndex) public {
+console.log("swap xfer in");
         safeTransferFrom(tokenA, msg.sender, address(this), amountA);
         make(
             reversePool.convert(
@@ -374,7 +393,8 @@ contract OrderPool is IOrderPool {
         onlyOwner
         returns (uint256 collected)
     {
-        safeTransferFrom(tokenA, address(this), payTo, feesToCollect);
+console.log("withdraw fees");
+        safeTransfer(tokenA, payTo, feesToCollect);
         collected = feesToCollect;
         feesToCollect = 0;
     }

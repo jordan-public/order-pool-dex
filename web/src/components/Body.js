@@ -122,7 +122,7 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
         if (orderStatus.remainingA === 0 && orderStatus.remainingB === 0 && orderStatus.rangeIndex !== ethers.constants.MaxUint256) return;
         if (await assureAuthorized() === 0) return;
         try {
-            const tx = await orderPool.swap(amountA, sufficientOrderIndex, {gasLimit: 5000000});
+            const tx = await orderPool.swap(amountA, sufficientOrderIndex, {gasLimit: 10000000});
 
             const r = await tx.wait();
             await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
@@ -153,6 +153,8 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
     if (!provider || !pair) return(<></>);
     return (<>
         {pair.SymbolA}/{pair.SymbolB}: {pair.pair}
+        <br/>
+        {pair.SymbolA}/{pair.SymbolB} = {tokenA && tokenA.address}/{tokenB && tokenB.address}
         <br/>
         Amount A: {amountA.toString()}
         <br/>
