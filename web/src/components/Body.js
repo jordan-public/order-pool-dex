@@ -34,7 +34,7 @@ function Body({provider, address, pair}) {
             const cTokenA = new ethers.Contract(await p.tokenA(), aERC20.abi, signer);
             setTokenA(cTokenA);
             const cTokenB = new ethers.Contract(await p.tokenB(), aERC20.abi, signer);
-            setTokenA(cTokenB);
+            setTokenB(cTokenB);
             const tokenADec = await cTokenA.decimals();
             setTokenADecimals(tokenADec);
             const tokenBDec = await cTokenB.decimals();
@@ -66,15 +66,60 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
         }
     }); // Run on each render because onUpdate is a closure
 
+    const registerToken = async (address, symbol, decimals) => {
+        try {
+            await window.ethereum.request({
+                method: 'wallet_watchAsset',
+                params: {
+                "type":"ERC20",
+                "options":{
+                    "address": address,
+                    "symbol": symbol,
+                    "decimals": decimals,
+                    "image": (window.location.origin + "/favicon.ico"),
+                },
+                },
+                id: Math.round(Math.random() * 100000),
+            });
+        } catch(_) {};
+    }
+
+    const addTokenAToWallet = async () => {
+        await registerToken(tokenA.address, pair.SymbolA, tokenADecimals);
+    }
+
+    const addTokenBToWallet = async () => {
+        await registerToken(tokenB.address, pair.SymbolB, tokenBDecimals);
+    }
+
     const onChangeAmount = async (e) => {
         const a = BigNumber.from(decimalToUint256(parseFloat(e.currentTarget.value), tokenADecimals));
         setAmountA(a);
         await doUpdate(a, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
     }
 
+    const assureAuthorized = async () => {
+        const allowance = await tokenA.allowance(address, orderPool.address);
+        if (amountA.gt(allowance)) {
+            try {
+                const authzAmount = ethers.constants.MaxUint256;
+                const tx = await tokenA.approve(orderPool.address, authzAmount);
+    
+                const r = await tx.wait();
+                window.alert('Completed. Block hash: ' + r.blockHash);
+                return authzAmount;        
+            } catch(e) {
+                console.log("Error: ", e);
+                window.alert(e.message + "\n" + (e.data?e.data.message:""));
+                return 0;
+            }
+        }
+    }
+
     const onSwap = async () => {
         if (!orderStatus) return;
-        if (orderStatus[1] == 0 && orderStatus[2] == 0 && orderStatus[2] != ethers.constants.MaxUint256) return;
+        if (orderStatus.remainingA === 0 && orderStatus.remainingB === 0 && orderStatus.rangeIndex !== ethers.constants.MaxUint256) return;
+        if (await assureAuthorized() === 0) return;
         try {
             const tx = await orderPool.swap(amountA, sufficientOrderIndex);
 
@@ -90,9 +135,9 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
     
     const onWithdraw = async () => {
         if (!orderStatus) return;
-        if (orderStatus[2] == ethers.constants.MaxUint256) return;
+        if (orderStatus.rangeIndex === ethers.constants.MaxUint256) return;
         try {
-            const tx = await orderPool.withdraw(orderStatus[2]);
+            const tx = await orderPool.withdraw(orderStatus.rangeIndex);
 
             const r = await tx.wait();
             await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
@@ -114,14 +159,23 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
         <br/>
         sufficientOrderIndex: {sufficientOrderIndex.toString()}
         <br/>
-        rangeIndex: {orderStatus && orderStatus[2].toString()}
+        rangeIndex: <br/>{orderStatus && orderStatus.rangeIndex.toString()}
+        <br/>
+        ethers.constants.MaxUint256: <br/>{ethers.constants.MaxUint256.toString()}
+        <br/>
+        rangeIndex!==ethers.constants.MaxUint256: {orderStatus && !orderStatus.rangeIndex.eq(ethers.constants.MaxUint256)?"true":"false"}
         <br/><br/>
         <Container fluid>
             <Row></Row>
             <Row>
                 <Col></Col>
                 <Col><Card border="primary" bg="light" style={{ width: '25rem' }}>
-                    <Card.Header>{pair.SymbolA} -> {pair.SymbolB}</Card.Header>
+                    <Card.Header>
+                        {pair.SymbolA} &nbsp;
+                        <Button size="sm" onClick={addTokenAToWallet}>+</Button>
+                        &nbsp; -> {pair.SymbolB} &nbsp;
+                        <Button size="sm" onClick={addTokenBToWallet}>+</Button>
+                    </Card.Header>
                     <Card.Body>
                         <Form>
                         <InputGroup className="mb-3">
@@ -129,15 +183,16 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
                             <Form.Control type="number" onChange={onChangeAmount}/>
                             <Button variant="primary" onClick={onSwap}>Swap -></Button>
                         </InputGroup>
-                        <InputGroup className="mb-3">
-                            <InputGroup.Text>Unclaimed: {pair.SymbolB}</InputGroup.Text>
-                            <Form.Control readOnly={true} />
-                            <Button variant="success" onClick={onWithdraw}>Withdraw</Button>
-                        </InputGroup>
-                        {orderStatus && orderStatus[2] != ethers.constants.MaxUint256 && <>
-                            <Form.Text>Remaining unexecuted amount of {pair.SymbolA} amount: {uint256ToDecimal(orderStatus[0], tokenADecimals)}</Form.Text>
+                        {orderStatus && !orderStatus.rangeIndex.eq(ethers.constants.MaxUint256) &&
+                            <InputGroup className="mb-3">
+                                <InputGroup.Text>Unclaimed: {pair.SymbolB}</InputGroup.Text>
+                                <Form.Control readOnly={true} value={orderStatus?uint256ToDecimal(orderStatus.remainingB, tokenBDecimals):0}/>
+                                <Button variant="success" onClick={onWithdraw}>Withdraw</Button>
+                            </InputGroup>}
+                        {orderStatus && <>
+                            <Form.Text>Remaining unexecuted amount of {pair.SymbolA} amount: {orderStatus && uint256ToDecimal(orderStatus.remainingA, tokenADecimals)}</Form.Text>
                             <br/>
-                            <Form.Text>Remaining uncollected executed amount of {pair.SymbolB} amount: {uint256ToDecimal(orderStatus[1], tokenBDecimals)}</Form.Text>
+                            <Form.Text>Remaining uncollected executed amount of {pair.SymbolB} amount: {orderStatus && uint256ToDecimal(orderStatus.remainingB, tokenBDecimals)}</Form.Text>
                             <br/>
                         </>}
                         <Form.Text>Estimated gross {pair.SymbolB} amount: {uint256ToDecimal(estAmountB, tokenBDecimals)}</Form.Text>

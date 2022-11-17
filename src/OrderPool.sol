@@ -91,18 +91,11 @@ contract OrderPool is IOrderPool {
         view
         returns (uint256 amountB)
     {
-        console.log("Price: ", price);
         amountB = isPriceFeedInverse
             ? (amountA * priceDecimalsFactor * tokenBDecimalsFactor) /
                 (price * tokenADecimalsFactor)
             : (amountA * price * tokenBDecimalsFactor) /
                 (priceDecimalsFactor * tokenADecimalsFactor);
-        console.log(
-            ERC20(address(tokenA)).symbol(),
-            " -> ",
-            ERC20(address(tokenB)).symbol()
-        );
-        console.log("%s -> %s", amountA, amountB);
     }
 
     function safeTransferFrom(
@@ -174,12 +167,12 @@ contract OrderPool is IOrderPool {
     ///     Use sufficientOrderIndexSearch() to determine this value.
     ///     If this value is usurped by another order between the last call of sufficientOrderIndexSearch() and this call, this function should revert and it has to be tried again.
     ///     Improve this !!!
-    /// @param amountRemainingUnswapped - the amount left unswapped which can be placed as Maker
+    /// @return amountARemainingUnswapped - the amount left unswapped which can be placed as Maker
     function swapImmediately(
         uint256 amountA,
         address payTo,
         uint256 sufficientOrderIndex
-    ) external onlyReversePool returns (uint256 amountRemainingUnswapped) {
+    ) external onlyReversePool returns (uint256 amountARemainingUnswapped) {
         assert(
             unfilledOrdersCummulativeAmount() >= filledOrdersCummulativeAmount
         );
@@ -191,14 +184,13 @@ contract OrderPool is IOrderPool {
         ) {
             // no need to require(sufficientOrderIndex == orders.length - 1) as another order may have usurped this
             sufficientOrderIndex = orders.length - 1;
-            amountRemainingUnswapped = convert(
+            amountARemainingUnswapped =
                 (amountA + filledOrdersCummulativeAmount) -
-                    unfilledOrdersCummulativeAmount()
-            ); // extra parenthesis intended
+                    unfilledOrdersCummulativeAmount(); // extra parenthesis intended
             amountA =
                 unfilledOrdersCummulativeAmount() -
                 filledOrdersCummulativeAmount;
-        } // else amountRemainingUnswapped = 0;
+        } // else amountARemainingUnswapped = 0;
         // At this point amountA can be filled (swapped)
         require(
             orders[sufficientOrderIndex].cumulativeOrdersAmount -
@@ -219,18 +211,18 @@ contract OrderPool is IOrderPool {
             amountA
         ) {
             // payout top order part immediately and adjust
-            uint256 toRemain = orders[sufficientOrderIndex]
+            uint256 toRemainA = orders[sufficientOrderIndex]
                 .cumulativeOrdersAmount -
                 filledOrdersCummulativeAmount -
                 amountA;
-            uint256 toPayOut = orders[sufficientOrderIndex].amountAToSwap -
-                toRemain;
-            orders[sufficientOrderIndex].amountAToSwap = toRemain;
+            uint256 toPayOutA = orders[sufficientOrderIndex].amountAToSwap -
+                toRemainA;
+            orders[sufficientOrderIndex].amountAToSwap = toRemainA;
             reversePool.proxyTransferFrom(
                 tokenB,
                 address(reversePool),
                 orders[sufficientOrderIndex].owner,
-                convert(toPayOut) // Maker pays no fees - payout the exact converted amount
+                convert(toPayOutA) // Maker pays no fees - payout the exact converted amount
             );
         }
         // At this point all orders up to and including sufficientOrderIndex-1 can withdraw
@@ -282,7 +274,6 @@ contract OrderPool is IOrderPool {
     {
         uint256 orderId = orderOwned[msg.sender];
         if (orderId == 0) return (0, 0, type(uint256).max); // Non-existent
-        remainingA = orders[orderId].amountAToSwap; // otherwise 0 as initialized
         rangeIndex = rangeIndexSearch();
         if (rangeIndex == type(uint256).max)
             remainingA = orders[orderId].amountAToSwap;
@@ -368,10 +359,12 @@ contract OrderPool is IOrderPool {
     function swap(uint256 amountA, uint256 sufficientOrderIndex) public {
         safeTransferFrom(tokenA, msg.sender, address(this), amountA);
         make(
-            reversePool.swapImmediately(
-                convert(amountA),
-                msg.sender,
-                sufficientOrderIndex
+            reversePool.convert(
+                reversePool.swapImmediately(
+                    convert(amountA),
+                    msg.sender,
+                    sufficientOrderIndex
+                )
             )
         );
     }

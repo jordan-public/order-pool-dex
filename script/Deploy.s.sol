@@ -7,6 +7,12 @@ import "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import "../src/OrderPool.sol";
 import "../src/OrderPoolFactory.sol";
 
+contract Token is ERC20 {
+    constructor(string memory symbol, uint amount) ERC20(symbol, symbol) {
+        _mint(msg.sender, amount);
+    }
+}
+
 contract Deploy is Script {
     // Mainnet
     // address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -29,19 +35,54 @@ contract Deploy is Script {
     address constant ORACLE_BTC_ETH =
         0x779877A7B0D9E8603169DdbD7836e478b4624789;
 
+    // Accounts from anvil
+    address constant account1 = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
+    address constant account2 = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
+    address constant account3 = 0x90F79bf6EB2c4f870365E785982E1f101E93b906;
+    address constant account4 = 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65;
+
     function run() external {
         // uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(); /*deployerPrivateKey*/
 
-        console.log("Creator: ", msg.sender);
+        console.log("Creator (owner): ", msg.sender);
+
+        // Create 2 tokens
+        Token JETH = new Token("JETH", 100 * 10**18); // 100 JETH
+        console.log("Token JETH address: ", address(JETH));
+        // Re-start Anvil before deploying to deterministically deploy at
+        // Token JETH address:  0xe70fc4dbE4b655DD80FE6C02e0E9C5d3215420Ef
+
+        Token JUSD = new Token("JUSD", 100000 * 10**18); // 100,000 JUSD
+        console.log("Token JUSD address: ", address(JUSD));
+        // Re-start Anvil before deploying to deterministically deploy at
+        // Token JUSD address:  0xCD4ee20B85dd044742a2Ef1627E09b371D785286
+  
+        // Fund accounts 2, 3, 4 and 5 for experimentation
+        JETH.transfer(account1, 25 * 10**18);
+        JETH.transfer(account2, 25 * 10**18);
+        JETH.transfer(account3, 25 * 10**18);
+        JETH.transfer(account4, 25 * 10**18);
+        JUSD.transfer(account1, 25000 * 10**18);
+        JUSD.transfer(account2, 25000 * 10**18);
+        JUSD.transfer(account3, 25000 * 10**18);
+        JUSD.transfer(account4, 25000 * 10**18);
 
         OrderPoolFactory factory = new OrderPoolFactory();
         console.log(
             "Order Pool Factory deployed: ",
-            address(factory),
-            " owner: ",
-            factory.owner()
+            address(factory)
         );
+
+        {
+            factory.createPair(ORACLE_ETH_USD, false, address(JETH), address(JUSD));
+            IOrderPool p = factory.getPair(factory.getNumPairs() - 1); // Assuning no one runs this script concurrently
+            console.log("Order Pool JETH/JUSD deployed at:", address(p));
+            console.log(
+                "Reverse Order Pool JUSD/JETH deployed at: ",
+                address(p.reversePool())
+            );
+        }
 
         {
             factory.createPair(ORACLE_ETH_USD, false, WETH, USDC);
@@ -80,6 +121,5 @@ contract Deploy is Script {
                 address(p.reversePool())
             );
         }
-        vm.stopBroadcast();
     }
 }
