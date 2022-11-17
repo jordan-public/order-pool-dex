@@ -39,9 +39,7 @@ function Body({provider, address, pair}) {
             setTokenADecimals(tokenADec);
             const tokenBDec = await cTokenB.decimals();
             setTokenBDecimals(tokenBDec);
-            const aInit = BigNumber.from(10).pow(tokenADec);
-            setAmountA(aInit);
-            await doUpdate(aInit, p, r, tokenADec, tokenBDec);
+            await doUpdate(amountA, p, r, tokenADec, tokenBDec);
           }) ();
     }, [provider, address, pair]); // On load
 
@@ -93,7 +91,10 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
     }
 
     const onChangeAmount = async (e) => {
-        const a = BigNumber.from(decimalToUint256(parseFloat(e.currentTarget.value), tokenADecimals));
+        let a = e.currentTarget.value;
+        if (!a) a = "0"
+        else
+            a = BigNumber.from(decimalToUint256(parseFloat(e.currentTarget.value), tokenADecimals));
         setAmountA(a);
         await doUpdate(a, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
     }
