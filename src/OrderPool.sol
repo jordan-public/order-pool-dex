@@ -198,7 +198,7 @@ console.log("to: %s amount: %s", to, amount);
         if (unfilledOrdersCummulativeAmount() == filledOrdersCummulativeAmount)
             return amountA; // Empty Order Pool - all is unswapped
         if (
-            amountA >=
+            amountA >
             unfilledOrdersCummulativeAmount() - filledOrdersCummulativeAmount
         ) {
             // no need to require(sufficientOrderIndex == orders.length - 1) as another order may have usurped this
