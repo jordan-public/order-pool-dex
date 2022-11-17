@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 import React from 'react';
-import { Container, Row, Col, Card, Form, InputGroup, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, InputGroup, Button, Spinner } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.css'; 
 import { BigNumber, ethers } from 'ethers';
 import aIOrderPool from '../artifacts/IOrderPool.json';
@@ -122,7 +122,7 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
         if (orderStatus.remainingA === 0 && orderStatus.remainingB === 0 && orderStatus.rangeIndex !== ethers.constants.MaxUint256) return;
         if (await assureAuthorized() === 0) return;
         try {
-            const tx = await orderPool.swap(amountA, sufficientOrderIndex);
+            const tx = await orderPool.swap(amountA, sufficientOrderIndex, {gasLimit: 5000000});
 
             const r = await tx.wait();
             await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
@@ -179,11 +179,14 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
                     </Card.Header>
                     <Card.Body>
                         <Form>
+                        {orderStatus && orderStatus.remainingA.eq(BigNumber.from(0)) &&
                         <InputGroup className="mb-3">
                             <InputGroup.Text>Amount: {pair.SymbolA}</InputGroup.Text>
                             <Form.Control type="number" onChange={onChangeAmount}/>
                             <Button variant="primary" onClick={onSwap}>Swap -></Button>
-                        </InputGroup>
+                        </InputGroup>}
+                        {orderStatus && orderStatus.remainingA.gt(BigNumber.from(0)) &&
+                            <><Spinner animation="border" variant="primary" /><br/></>}
                         {orderStatus && !orderStatus.rangeIndex.eq(ethers.constants.MaxUint256) &&
                             <InputGroup className="mb-3">
                                 <InputGroup.Text>Unclaimed: {pair.SymbolB}</InputGroup.Text>

@@ -148,10 +148,10 @@ contract OrderPool is IOrderPool {
         ) return orders.length - 1;
         for (uint256 i = orders.length - 1; i > 0; i--) {
             if (
-                amountA >=
+                amountA <=
                 orders[i].cumulativeOrdersAmount -
                     filledOrdersCummulativeAmount &&
-                amountA <
+                amountA >
                 orders[i - 1].cumulativeOrdersAmount -
                     filledOrdersCummulativeAmount
             ) return i;
