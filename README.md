@@ -85,4 +85,4 @@ To test and debug:
 
 To run:
 - Start the web application by issuing the following command in the web folder "npm start". 
-- Access the web application at "localhost:3000".
+- Access the web application at http://localhost:3000.
