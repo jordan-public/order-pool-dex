@@ -8,7 +8,7 @@ For demo see the [demo](/demo/READMR.md) folder.
 
 ## What it does
 **Order Pool DEX** allows the users to exchange one fungible asset for another.
-The new concept of **Order Pool** allows gas-efficient order management and execution. It does not require sizable capital deposit and it uses ChainLink for price discovery thus becoming immune to MEV abuse.
+The new concept of **Order Pool** allows gas-efficient order management and execution. It does not require sizable capital deposit and it uses ChainLink for price discovery thus becoming immune to MEV abuse and slippage.
 
 If a counter-party pool is not empty, maximal possible part the order executes as "taker", while the rest of the order is pooled and it becomes a "maker". Upon execution, the maker pays the taker a small fee (0.25%) and to the protocol another 0.05%. 
 
