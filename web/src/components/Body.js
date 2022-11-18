@@ -120,8 +120,10 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
     }
 
     const onSwap = async () => {
+    console.log("sufficientOrderIndex", sufficientOrderIndex);
         if (!orderStatus) return;
-        if (orderStatus.remainingA === 0 && orderStatus.remainingB === 0 && orderStatus.rangeIndex !== ethers.constants.MaxUint256) return;
+        if (orderStatus.remainingA !== 0 || orderStatus.remainingB !== 0 || 
+            orderStatusReverse.remainingA !== 0 || orderStatusReverse.remainingB !== 0) return;
         if (await assureAuthorized() === 0) return;
         try {
             const tx = await orderPool.swap(amountA, sufficientOrderIndex, {gasLimit: 10000000});
@@ -137,10 +139,14 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
     }
     
     const onWithdraw = async () => {
-        if (!orderStatus) return;
-        if (orderStatus.rangeIndex === ethers.constants.MaxUint256) return;
+        if (!orderStatus || !orderStatusReverse) return;
+    console.log("orderStatus.rangeIndex", orderStatus.rangeIndex);
+    console.log("orderStatusReverse.rangeIndex", orderStatusReverse.rangeIndex);
+        if (orderStatus.rangeIndex === ethers.constants.MaxUint256 && orderStatusReverse.rangeIndex === ethers.constants.MaxUint256) return;
         try {
-            const tx = await orderPool.withdraw(orderStatus.rangeIndex);
+            const tx = (orderStatus.rangeIndex !== ethers.constants.MaxUint256)? 
+                await orderPool.withdraw(orderStatus.rangeIndex):
+                await reverseOrderPool.withdraw(orderStatusReverse.rangeIndex);
 
             const r = await tx.wait();
             await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
@@ -154,19 +160,6 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
 
     if (!provider || !pair ) return(<></>);
     return (<>
-        {pair.SymbolA}/{pair.SymbolB}: {pair.pair}
-        <br/>
-        {pair.SymbolA}/{pair.SymbolB} = {tokenA && tokenA.address}/{tokenB && tokenB.address}
-        <br/>
-        Amount A: {amountA && amountA.toString()}
-        <br/>
-        Est Amount B: {estAmountB && estAmountB.toString()}
-        <br/>
-        sufficientOrderIndex: {sufficientOrderIndex && sufficientOrderIndex.toString()}
-        <br/>
-        rangeIndex: {orderStatus && orderStatus.rangeIndex && orderStatus.rangeIndex.toString()}
-        <br/>
-        ethers.constants.MaxUint256: <br/>{ethers.constants.MaxUint256.toString()}
         <br/><br/>
         <Container fluid>
             <Row></Row>
