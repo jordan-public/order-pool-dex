@@ -18,6 +18,8 @@ function Body({provider, address, pair}) {
 
     const [amountA, setAmountA] = React.useState(BigNumber.from(0));
     const [estAmountB, setEstAmountB] = React.useState(BigNumber.from(0));
+    const [estProtocolFee, setEstProtocolFee] = React.useState(BigNumber.from(0));
+    const [estT2MFee, setEstT2MFee] = React.useState(BigNumber.from(0));
     const [poolSizeA, setPoolSizeA] = React.useState(BigNumber.from(0));
     const [poolSizeB, setPoolSizeB] = React.useState(BigNumber.from(0));
     const [sufficientOrderIndex, setSufficientOrderIndex] = React.useState(BigNumber.from(0));
@@ -47,6 +49,7 @@ function Body({provider, address, pair}) {
     const doUpdate = async (amtA, p, r, tokenADec, tokenBDec) => {
         if (!tokenADec || !tokenBDec) return;
         setEstAmountB(await p.convert(amtA));
+        setEstProtocolFee();
         setPoolSizeA(await p.poolSize());
         setPoolSizeB(await r.poolSize());
         setSufficientOrderIndex(await p.sufficientOrderIndexSearch(amtA));
@@ -165,7 +168,7 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
             <Row></Row>
             <Row>
                 <Col></Col>
-                <Col><Card border="primary" bg="light" style={{ width: '25rem' }}>
+                <Col><Card border="primary" bg="light" style={{ width: '30rem' }}>
                     <Card.Header>
                         {pair.SymbolA} &nbsp;
                         <Button size="sm" onClick={addTokenAToWallet}>+</Button>
@@ -176,15 +179,41 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
                         <Form>
                         {orderStatus && orderStatusReverse &&
                          orderStatus.remainingA.eq(BigNumber.from(0)) && orderStatus.remainingB.eq(BigNumber.from(0)) &&
-                         orderStatusReverse.remainingA.eq(BigNumber.from(0)) && orderStatusReverse.remainingB.eq(BigNumber.from(0)) &&
-                        <InputGroup className="mb-3">
-                            <InputGroup.Text>Amount: {pair.SymbolA}</InputGroup.Text>
-                            <Form.Control type="number" onChange={onChangeAmount}/>
-                            <Button variant="primary" onClick={onSwap}>Swap -></Button>
-                        </InputGroup>}
-                        {orderStatus && orderStatusReverse &&
-                         (orderStatus.remainingA.gt(BigNumber.from(0)) || orderStatusReverse.remainingA.gt(BigNumber.from(0)) ) &&
-                            <><Spinner animation="border" variant="primary" /><br/></>}
+                         orderStatusReverse.remainingA.eq(BigNumber.from(0)) && orderStatusReverse.remainingB.eq(BigNumber.from(0)) && <>
+                            <InputGroup className="mb-3">
+                                <InputGroup.Text>Amount: {pair.SymbolA}</InputGroup.Text>
+                                <Form.Control type="number" onChange={onChangeAmount}/>
+                                <Button variant="primary" onClick={onSwap}>Swap -></Button>
+                            </InputGroup>
+                            <br/>
+                            Estimate:
+                            <br/>
+                            Estimated gross {pair.SymbolB} amount: {uint256ToDecimal(estAmountB && estAmountB, tokenBDecimals)}
+                            <br/>
+                            Estimated protocol fee: (0.05%)
+                            <br/>
+                            Estimated taker fee: (0.25%)
+                        </>}
+                        {orderStatus && orderStatusReverse && 
+                         (orderStatus.remainingA.gt(BigNumber.from(0)) || orderStatusReverse.remainingA.gt(BigNumber.from(0)) ) && <>
+                            <Spinner animation="border" variant="primary" />
+                            {orderStatus && <>
+                                <br/>
+                                Pool:
+                                <br/>
+                                Remaining unexecuted amount of {pair.SymbolA} amount: {orderStatus && uint256ToDecimal(orderStatus.remainingA, tokenADecimals)}
+                                <br/>
+                                Uncollected executed amount of {pair.SymbolB} amount: {orderStatus && uint256ToDecimal(orderStatus.remainingB, tokenBDecimals)}
+                            </>}
+                            {orderStatusReverse && <>
+                                <br/>
+                                Reverse Pool:
+                                <br/>
+                                Remaining unexecuted amount of {pair.SymbolB} amount: {orderStatusReverse && uint256ToDecimal(orderStatusReverse.remainingA, tokenBDecimals)}
+                                <br/>
+                                Uncollected executed amount of {pair.SymbolA} amount: {orderStatusReverse && uint256ToDecimal(orderStatusReverse.remainingB, tokenADecimals)}
+                            </>}
+                        </>}
                         {orderStatus && orderStatusReverse &&
                          (orderStatus.remainingB.gt(BigNumber.from(0)) || orderStatusReverse.remainingB.gt(BigNumber.from(0))) &&
                             <InputGroup className="mb-3">
@@ -192,28 +221,15 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
                                 </InputGroup.Text>
                                 <Form.Control readOnly={true} value={orderStatus.remainingB.gt(BigNumber.from(0))?uint256ToDecimal(orderStatus.remainingB, tokenBDecimals):uint256ToDecimal(orderStatusReverse.remainingB, tokenADecimals)}/>
                                 <Button variant="success" onClick={onWithdraw}>Withdraw</Button>
-                            </InputGroup>}
-                            {orderStatus && <>
-                            <Form.Text>Remaining unexecuted amount of {pair.SymbolA} amount: {orderStatus && uint256ToDecimal(orderStatus.remainingA, tokenADecimals)}</Form.Text>
-                            <br/>
-                            <Form.Text>Remaining uncollected executed amount of {pair.SymbolB} amount: {orderStatus && uint256ToDecimal(orderStatus.remainingB, tokenBDecimals)}</Form.Text>
-                            <br/>
-                        </>}
-                        {orderStatusReverse && <>
-                            <Form.Text>RRemaining unexecuted amount of {pair.SymbolB} amount: {orderStatusReverse && uint256ToDecimal(orderStatusReverse.remainingA, tokenBDecimals)}</Form.Text>
-                            <br/>
-                            <Form.Text>RRemaining uncollected executed amount of {pair.SymbolA} amount: {orderStatusReverse && uint256ToDecimal(orderStatusReverse.remainingB, tokenADecimals)}</Form.Text>
-                            <br/>
-                        </>}
-                        <Form.Text>Estimated gross {pair.SymbolB} amount: {uint256ToDecimal(estAmountB, tokenBDecimals)}</Form.Text>
+                            </InputGroup>
+                        }
                         <br/>
-                        <Form.Text>Estimated protocol fee: (0.05%)</Form.Text>
                         <br/>
-                        <Form.Text>Estimated taker fee: (0.25%)</Form.Text>
+                        Pool:
                         <br/>
-                        <Form.Text>{pair.SymbolA} waiting to swap: {uint256ToDecimal(poolSizeA, tokenADecimals)}</Form.Text>
+                        {pair.SymbolA} waiting to swap: {uint256ToDecimal(poolSizeA, tokenADecimals)}
                         <br/>
-                        <Form.Text>{pair.SymbolB} available immediately: {uint256ToDecimal(poolSizeB, tokenBDecimals)}</Form.Text>
+                        {pair.SymbolB} available immediately: {uint256ToDecimal(poolSizeB, tokenBDecimals)}
                         </Form>
                     </Card.Body>
                 </Card></Col>
