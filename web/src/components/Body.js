@@ -18,8 +18,8 @@ function Body({provider, address, pair}) {
 
     const [amountA, setAmountA] = React.useState(BigNumber.from(0));
     const [estAmountB, setEstAmountB] = React.useState(BigNumber.from(0));
-    const [estProtocolFee, setEstProtocolFee] = React.useState(BigNumber.from(0));
-    const [estT2MFee, setEstT2MFee] = React.useState(BigNumber.from(0));
+    const [estProtocolFee, setEstProtocolFee] = React.useState("");
+    const [estT2MFee, setEstT2MFee] = React.useState("");
     const [poolSizeA, setPoolSizeA] = React.useState(BigNumber.from(0));
     const [poolSizeB, setPoolSizeB] = React.useState(BigNumber.from(0));
     const [sufficientOrderIndex, setSufficientOrderIndex] = React.useState(BigNumber.from(0));
@@ -48,10 +48,20 @@ function Body({provider, address, pair}) {
 
     const doUpdate = async (amtA, p, r, tokenADec, tokenBDec) => {
         if (!tokenADec || !tokenBDec) return;
-        setEstAmountB(await p.convert(amtA));
-        setEstProtocolFee();
-        setPoolSizeA(await p.poolSize());
-        setPoolSizeB(await r.poolSize());
+        const ps = await p.poolSize();
+        setPoolSizeA(ps);
+        const rs = await r.poolSize();
+        setPoolSizeB(rs);
+        const estAmtB = await p.convert(amtA);
+        setEstAmountB(estAmtB);
+        const t = rs.gte(estAmtB) ? estAmtB : rs;
+        const m = estAmtB.gt(rs) ? estAmtB.sub(rs) : BigNumber.from(0);
+        setEstProtocolFee(uint256ToDecimal(t.mul(BigNumber.from(5)).div(BigNumber.from(10000)), tokenBDec));
+console.log("m: ", m, " t: ", t);
+        const tmf = (t.gt(m)) ?
+            uint256ToDecimal(t.sub(m).mul(BigNumber.from(25)).div(BigNumber.from(10000)), tokenBDec) :
+            "-" + uint256ToDecimal(m.sub(t).mul(BigNumber.from(25)).div(BigNumber.from(10000)), tokenBDec);
+        setEstT2MFee(tmf);
         setSufficientOrderIndex(await p.sufficientOrderIndexSearch(amtA));
         setOrderStatus(await p.orderStatus());
         setOrderStatusReverse(await r.orderStatus());
@@ -168,7 +178,7 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
             <Row></Row>
             <Row>
                 <Col></Col>
-                <Col><Card border="primary" bg="light" style={{ width: '30rem' }}>
+                <Col><Card border="primary" bg="light" style={{ width: '35rem' }}>
                     <Card.Header>
                         {pair.SymbolA} &nbsp;
                         <Button size="sm" onClick={addTokenAToWallet}>+</Button>
@@ -188,11 +198,11 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
                             <br/>
                             Estimate:
                             <br/>
-                            Estimated gross {pair.SymbolB} amount: {uint256ToDecimal(estAmountB && estAmountB, tokenBDecimals)}
+                            Estimated gross {pair.SymbolB} amount to receive: {uint256ToDecimal(estAmountB && estAmountB, tokenBDecimals)}
                             <br/>
-                            Estimated protocol fee: (0.05%)
+                            Estimated protocol fee: {estProtocolFee} {pair.SymbolB} (0.05%)
                             <br/>
-                            Estimated taker fee: (0.25%)
+                            Estimated taker to maker fee: {estT2MFee} {pair.SymbolB} (0.25%)
                         </>}
                         {orderStatus && orderStatusReverse && 
                          (orderStatus.remainingA.gt(BigNumber.from(0)) || orderStatusReverse.remainingA.gt(BigNumber.from(0)) ) && <>
