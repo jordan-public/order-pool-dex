@@ -161,6 +161,7 @@ console.log("to: %s amount: %s", to, amount);
         returns (uint256)
     {
         assert(orders.length > 0); // As a sentinel is added in the constructor
+        if (amountA == 0) return 0;
         if (
             amountA >=
             unfilledOrdersCummulativeAmount() - filledOrdersCummulativeAmount
@@ -297,8 +298,9 @@ console.log("swap immediately xfer");
         rangeIndex = rangeIndexSearch();
         if (rangeIndex == type(uint256).max)
             remainingA = orders[orderId].amountAToSwap;
+            // remainingB = 0 as initialized
         else {
-            // otherwise remainingB = 0 as initialized
+            // remainingA = 0 as initialized
             remainingB = convertAt(
                 orders[orderId].amountAToSwap,
                 orderRanges[rangeIndex].executionPrice
@@ -351,7 +353,7 @@ console.log("withdraw xfer fees");
                     FEE_TAKER_TO_MAKER) / FEE_DENOM
             );
         }
-        orders[orderId].amountAToSwap = 0; // In either case above
+        orders[orderId].amountAToSwap = 0; // In either case above; redundant but safe
         // Wipe order
         delete orders[orderId]; // Get gas credit
         orderOwned[msg.sender] = 0; // To avoid unnecessary exhaustive searches

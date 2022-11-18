@@ -22,10 +22,11 @@ function Body({provider, address, pair}) {
     const [poolSizeB, setPoolSizeB] = React.useState(BigNumber.from(0));
     const [sufficientOrderIndex, setSufficientOrderIndex] = React.useState(BigNumber.from(0));
     const [orderStatus, setOrderStatus] = React.useState(null);
+    const [orderStatusReverse, setOrderStatusReverse] = React.useState(null);
 
     React.useEffect(() => {
         (async () => {
-            if (!provider || !pair) return;console.log("UE1 - ok")
+            if (!provider || !pair) return;
             const signer = provider.getSigner();
             const p = new ethers.Contract(pair.pair, aIOrderPool.abi, signer);
             setOrderPool(p);
@@ -40,7 +41,7 @@ function Body({provider, address, pair}) {
             const tokenBDec = await cTokenB.decimals();
             setTokenBDecimals(tokenBDec);
             await doUpdate(amountA, p, r, tokenADec, tokenBDec);
-          }) ();
+        }) ();
     }, [provider, address, pair]); // On load
 
     const doUpdate = async (amtA, p, r, tokenADec, tokenBDec) => {
@@ -50,6 +51,7 @@ function Body({provider, address, pair}) {
         setPoolSizeB(await r.poolSize());
         setSufficientOrderIndex(await p.sufficientOrderIndexSearch(amtA));
         setOrderStatus(await p.orderStatus());
+        setOrderStatusReverse(await r.orderStatus());
     }
 
     const onUpdate = async (blockNumber) => {
@@ -150,23 +152,21 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
         }
     }
 
-    if (!provider || !pair) return(<></>);
+    if (!provider || !pair ) return(<></>);
     return (<>
         {pair.SymbolA}/{pair.SymbolB}: {pair.pair}
         <br/>
         {pair.SymbolA}/{pair.SymbolB} = {tokenA && tokenA.address}/{tokenB && tokenB.address}
         <br/>
-        Amount A: {amountA.toString()}
+        Amount A: {amountA && amountA.toString()}
         <br/>
-        Est Amount B: {estAmountB.toString()}
+        Est Amount B: {estAmountB && estAmountB.toString()}
         <br/>
-        sufficientOrderIndex: {sufficientOrderIndex.toString()}
+        sufficientOrderIndex: {sufficientOrderIndex && sufficientOrderIndex.toString()}
         <br/>
-        rangeIndex: <br/>{orderStatus && orderStatus.rangeIndex.toString()}
+        rangeIndex: {orderStatus && orderStatus.rangeIndex && orderStatus.rangeIndex.toString()}
         <br/>
         ethers.constants.MaxUint256: <br/>{ethers.constants.MaxUint256.toString()}
-        <br/>
-        rangeIndex!==ethers.constants.MaxUint256: {orderStatus && !orderStatus.rangeIndex.eq(ethers.constants.MaxUint256)?"true":"false"}
         <br/><br/>
         <Container fluid>
             <Row></Row>
@@ -181,24 +181,35 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
                     </Card.Header>
                     <Card.Body>
                         <Form>
-                        {orderStatus && orderStatus.remainingA.eq(BigNumber.from(0)) &&
+                        {orderStatus && orderStatusReverse &&
+                         orderStatus.remainingA.eq(BigNumber.from(0)) && orderStatus.remainingB.eq(BigNumber.from(0)) &&
+                         orderStatusReverse.remainingA.eq(BigNumber.from(0)) && orderStatusReverse.remainingB.eq(BigNumber.from(0)) &&
                         <InputGroup className="mb-3">
                             <InputGroup.Text>Amount: {pair.SymbolA}</InputGroup.Text>
                             <Form.Control type="number" onChange={onChangeAmount}/>
                             <Button variant="primary" onClick={onSwap}>Swap -></Button>
                         </InputGroup>}
-                        {orderStatus && orderStatus.remainingA.gt(BigNumber.from(0)) &&
+                        {orderStatus && orderStatusReverse &&
+                         (orderStatus.remainingA.gt(BigNumber.from(0)) || orderStatusReverse.remainingA.gt(BigNumber.from(0)) ) &&
                             <><Spinner animation="border" variant="primary" /><br/></>}
-                        {orderStatus && !orderStatus.rangeIndex.eq(ethers.constants.MaxUint256) &&
+                        {orderStatus && orderStatusReverse &&
+                         (orderStatus.remainingB.gt(BigNumber.from(0)) || orderStatusReverse.remainingB.gt(BigNumber.from(0))) &&
                             <InputGroup className="mb-3">
-                                <InputGroup.Text>Unclaimed: {pair.SymbolB}</InputGroup.Text>
-                                <Form.Control readOnly={true} value={orderStatus?uint256ToDecimal(orderStatus.remainingB, tokenBDecimals):0}/>
+                                <InputGroup.Text>Unclaimed: {orderStatus.remainingB.gt(BigNumber.from(0))?pair.SymbolB:pair.SymbolA}
+                                </InputGroup.Text>
+                                <Form.Control readOnly={true} value={orderStatus.remainingB.gt(BigNumber.from(0))?uint256ToDecimal(orderStatus.remainingB, tokenBDecimals):uint256ToDecimal(orderStatusReverse.remainingB, tokenADecimals)}/>
                                 <Button variant="success" onClick={onWithdraw}>Withdraw</Button>
                             </InputGroup>}
-                        {orderStatus && <>
+                            {orderStatus && <>
                             <Form.Text>Remaining unexecuted amount of {pair.SymbolA} amount: {orderStatus && uint256ToDecimal(orderStatus.remainingA, tokenADecimals)}</Form.Text>
                             <br/>
                             <Form.Text>Remaining uncollected executed amount of {pair.SymbolB} amount: {orderStatus && uint256ToDecimal(orderStatus.remainingB, tokenBDecimals)}</Form.Text>
+                            <br/>
+                        </>}
+                        {orderStatusReverse && <>
+                            <Form.Text>RRemaining unexecuted amount of {pair.SymbolB} amount: {orderStatusReverse && uint256ToDecimal(orderStatusReverse.remainingA, tokenBDecimals)}</Form.Text>
+                            <br/>
+                            <Form.Text>RRemaining uncollected executed amount of {pair.SymbolA} amount: {orderStatusReverse && uint256ToDecimal(orderStatusReverse.remainingB, tokenADecimals)}</Form.Text>
                             <br/>
                         </>}
                         <Form.Text>Estimated gross {pair.SymbolB} amount: {uint256ToDecimal(estAmountB, tokenBDecimals)}</Form.Text>
