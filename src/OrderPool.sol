@@ -104,10 +104,16 @@ contract OrderPool is IOrderPool {
         address to,
         uint256 amount
     ) internal {
-console.log("safeTransfer caller: %s token: %s", msg.sender, address(token));
-console.log("to: %s amount: %s", to, amount);
+        console.log(
+            "safeTransfer caller: %s token: %s",
+            msg.sender,
+            address(token)
+        );
+        console.log("to: %s amount: %s", to, amount);
         // bytes4(keccak256(bytes('transfer(address,uint256)')));
-        (bool success, bytes memory data) = address(token).call(abi.encodeWithSelector(0xa9059cbb, to, amount));
+        (bool success, bytes memory data) = address(token).call(
+            abi.encodeWithSelector(0xa9059cbb, to, amount)
+        );
         require(
             success && (data.length == 0 || abi.decode(data, (bool))),
             "OrderPool: transfer failed"
@@ -121,8 +127,12 @@ console.log("to: %s amount: %s", to, amount);
         address to,
         uint256 amount
     ) internal {
-console.log("safeTransferFrom caller: %s token: %s", msg.sender, address(token));
-console.log("from: %s to: %s amount: %s", from, to, amount);
+        console.log(
+            "safeTransferFrom caller: %s token: %s",
+            msg.sender,
+            address(token)
+        );
+        console.log("from: %s to: %s amount: %s", from, to, amount);
         // bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
         (bool success, bytes memory data) = address(token).call(
             abi.encodeWithSelector(0x23b872dd, from, to, amount)
@@ -138,8 +148,12 @@ console.log("from: %s to: %s amount: %s", from, to, amount);
         address to,
         uint256 amount
     ) external onlyReversePool {
-console.log("proxyTransfer caller: %s token: %s", msg.sender, address(tokenA));
-console.log("to: %s amount: %s", to, amount);
+        console.log(
+            "proxyTransfer caller: %s token: %s",
+            msg.sender,
+            address(tokenA)
+        );
+        console.log("to: %s amount: %s", to, amount);
         safeTransfer(token, to, amount);
     }
 
@@ -171,9 +185,11 @@ console.log("to: %s amount: %s", to, amount);
                 amountA <=
                 orders[i].cumulativeOrdersAmount -
                     filledOrdersCummulativeAmount &&
-                amountA >
-                orders[i - 1].cumulativeOrdersAmount -
-                    filledOrdersCummulativeAmount
+                (filledOrdersCummulativeAmount >=
+                    orders[i - 1].cumulativeOrdersAmount ||
+                    amountA >
+                    orders[i - 1].cumulativeOrdersAmount -
+                        filledOrdersCummulativeAmount)
             ) return i;
         }
         assert(false);
@@ -206,7 +222,7 @@ console.log("to: %s amount: %s", to, amount);
             sufficientOrderIndex = orders.length - 1;
             amountARemainingUnswapped =
                 (amountA + filledOrdersCummulativeAmount) -
-                    unfilledOrdersCummulativeAmount(); // extra parenthesis intended
+                unfilledOrdersCummulativeAmount(); // extra parenthesis intended
             amountA =
                 unfilledOrdersCummulativeAmount() -
                 filledOrdersCummulativeAmount;
@@ -220,6 +236,8 @@ console.log("to: %s amount: %s", to, amount);
         );
         require(
             sufficientOrderIndex == 0 ||
+                filledOrdersCummulativeAmount >=
+                orders[sufficientOrderIndex - 1].cumulativeOrdersAmount ||
                 orders[sufficientOrderIndex - 1].cumulativeOrdersAmount -
                     filledOrdersCummulativeAmount <
                 amountA,
@@ -237,29 +255,34 @@ console.log("to: %s amount: %s", to, amount);
                 amountA;
             uint256 toPayOutA = orders[sufficientOrderIndex].amountAToSwap -
                 toRemainA;
-            orders[sufficientOrderIndex].amountAToSwap = toRemainA;
-            sufficientOrderIndex--; // Did not fully fill the order at this index
-console.log("swap immediately counterparty");
+            console.log("swap immediately counterparty");
             reversePool.proxyTransfer(
                 tokenB,
                 orders[sufficientOrderIndex].owner,
                 convert(toPayOutA) // Maker pays no fees - payout the exact converted amount
             );
+            orders[sufficientOrderIndex].amountAToSwap = toRemainA;
+            sufficientOrderIndex--; // Did not fully fill the Maker at this index
+            // At this point all orders up to and including sufficientOrderIndex-1 can withdraw
+            // ... but order[sufficientOrderIndex] cannot since it was partially filled and paid out above
         }
-        // At this point all orders up to and including sufficientOrderIndex-1 can withdraw
-        // ... but order[sufficientOrderIndex] cannot since it was partially filled and paid out above
         filledOrdersCummulativeAmount += amountA;
         uint256 feeToProtocol = (amountA * FEE_TAKER_TO_PROTOCOL) / FEE_DENOM;
         feesToCollect += feeToProtocol;
         amountA -= feeToProtocol;
-console.log("swap immediately xfer");
+        console.log("swap immediately xfer");
         safeTransfer(
             tokenA,
             payTo,
             (amountA * (FEE_DENOM - FEE_TAKER_TO_MAKER - 1)) / FEE_DENOM // Payout less to compensate for fees; the "- 1" compensates for rounding
         );
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        orderRanges.push(OrderRange(sufficientOrderIndex, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
+        if (
+            orderRanges.length == 0 ||
+            orderRanges[orderRanges.length - 1].highIndex < sufficientOrderIndex
+        )
+            // Should not push more than once (partial fills)
+            orderRanges.push(OrderRange(sufficientOrderIndex, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
     }
 
     /// To be called from UI read-only
@@ -338,13 +361,9 @@ console.log("swap immediately xfer");
                 orders[orderId].amountAToSwap,
                 orderRanges[rangeIndex].executionPrice
             );
-console.log("withdraw xfer");
-            reversePool.proxyTransfer(
-                tokenB,
-                msg.sender,
-                amountB
-            );
-console.log("withdraw xfer fees");
+            console.log("withdraw xfer");
+            reversePool.proxyTransfer(tokenB, msg.sender, amountB);
+            console.log("withdraw xfer fees");
             safeTransfer(
                 tokenA,
                 msg.sender,
@@ -378,7 +397,7 @@ console.log("withdraw xfer fees");
     ///     Use sufficientOrderIndexSearch() to determine this value.
     /// See swapImmediately()
     function swap(uint256 amountA, uint256 sufficientOrderIndex) public {
-console.log("swap xfer in");
+        console.log("swap xfer in");
         safeTransferFrom(tokenA, msg.sender, address(this), amountA);
         make(
             reversePool.convert(
@@ -396,7 +415,7 @@ console.log("swap xfer in");
         onlyOwner
         returns (uint256 collected)
     {
-console.log("withdraw fees");
+        console.log("withdraw fees");
         safeTransfer(tokenA, payTo, feesToCollect);
         collected = feesToCollect;
         feesToCollect = 0;
