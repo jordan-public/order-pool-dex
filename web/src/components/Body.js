@@ -135,8 +135,8 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
     const onSwap = async () => {
     console.log("sufficientOrderIndex", sufficientOrderIndex);
         if (!orderStatus) return;
-        if (orderStatus.remainingA !== 0 || orderStatus.remainingB !== 0 || 
-            orderStatusReverse.remainingA !== 0 || orderStatusReverse.remainingB !== 0) return;
+        if (!orderStatus.remainingA.isZero() || !orderStatus.remainingB.isZero()  || 
+            !orderStatusReverse.remainingA.isZero() || !orderStatusReverse.remainingB.isZero()) return;
         if (await assureAuthorized() === 0) return;
         try {
             const tx = await orderPool.swap(amountA, sufficientOrderIndex, {gasLimit: 10000000});
@@ -153,11 +153,11 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
     
     const onWithdraw = async () => {
         if (!orderStatus || !orderStatusReverse) return;
-    console.log("orderStatus.rangeIndex", orderStatus.rangeIndex);
-    console.log("orderStatusReverse.rangeIndex", orderStatusReverse.rangeIndex);
-        if (orderStatus.rangeIndex === ethers.constants.MaxUint256 && orderStatusReverse.rangeIndex === ethers.constants.MaxUint256) return;
+    console.log("orderStatus.rangeIndex", orderStatus.rangeIndex.toString());
+    console.log("orderStatusReverse.rangeIndex", orderStatusReverse.rangeIndex.toString());
+        if (orderStatus.rangeIndex.eq(ethers.constants.MaxUint256) && orderStatusReverse.rangeIndex.eq(ethers.constants.MaxUint256)) return;
         try {
-            const tx = (orderStatus.rangeIndex !== ethers.constants.MaxUint256)? 
+            const tx = (!orderStatus.rangeIndex.eq(ethers.constants.MaxUint256))? 
                 await orderPool.withdraw(orderStatus.rangeIndex):
                 await reverseOrderPool.withdraw(orderStatusReverse.rangeIndex);
 
