@@ -1,4 +1,8 @@
-# ![IPDEX](doc/OrderPoolDEX-logo.png) 
+[This project](https://devpost.com/software/order-pool-dex) won the following prize at the [Chainlink Fall 2022 Hackathon](https://chain.link/hackathon) hackathon hosted by [DevPost](https://chainlinkfall2022.devpost.com):
+
+[![WINNER](doc/WINNER.png) Chainlink Top Quality Projects - $20,000](https://devpost.com/software/order-pool-dex)
+
+# ![Order Pool DEX](doc/OrderPoolDEX-logo.png) 
 # Order Pool Decentralized Exchange
 ## Not Liquidity Pool, not Order Book, but Order Pool
 
