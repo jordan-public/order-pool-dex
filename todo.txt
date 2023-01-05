@@ -1,2 +1,4 @@
-- UI with moving pair price and showing stats and liquidity
-- Execution via UI
+- UI: moving pair price and showing stats and liquidity
+- Bid/offer remove functionality
+- 2-sided order pool
+- command line utilities for fee witdrawal and stats
