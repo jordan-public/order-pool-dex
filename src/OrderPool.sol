@@ -32,16 +32,21 @@ contract OrderPool is IOrderPool {
 
     OrderType[] public orders;
     mapping(address => uint256) public orderOwned;
-    uint256 filledOrdersCummulativeAmount;
+    uint256 completedOrdersCummulativeAmount; // filled or withdrawn
 
-    function unfilledOrdersCummulativeAmount() internal view returns (uint256) {
-        if (orders.length == 0) return 0;
+    function availableOrdersCummulativeAmount()
+        internal
+        view
+        returns (uint256)
+    {
+        // assert(orders.length > 0); // As a sentinel is added in the constructor
         return orders[orders.length - 1].cumulativeOrdersAmount;
     }
 
     function poolSize() external view returns (uint256) {
         return
-            unfilledOrdersCummulativeAmount() - filledOrdersCummulativeAmount;
+            availableOrdersCummulativeAmount() -
+            completedOrdersCummulativeAmount;
     }
 
     struct OrderRange {
@@ -174,22 +179,24 @@ contract OrderPool is IOrderPool {
         view
         returns (uint256)
     {
-        assert(orders.length > 0); // As a sentinel is added in the constructor
+        // assert(orders.length > 0); // As a sentinel is added in the constructor
         if (amountA == 0) return 0;
         if (
             amountA >=
-            unfilledOrdersCummulativeAmount() - filledOrdersCummulativeAmount
-        ) return orders.length - 1;
+            availableOrdersCummulativeAmount() -
+                completedOrdersCummulativeAmount
+        ) return orders.length - 1; // Can only execute partially
         for (uint256 i = orders.length - 1; i > 0; i--) {
+            if (address(0) == orders[i].owner) continue; // Withdrawn order
             if (
                 amountA <=
                 orders[i].cumulativeOrdersAmount -
-                    filledOrdersCummulativeAmount &&
-                (filledOrdersCummulativeAmount >=
+                    completedOrdersCummulativeAmount &&
+                (completedOrdersCummulativeAmount >=
                     orders[i - 1].cumulativeOrdersAmount ||
                     amountA >
                     orders[i - 1].cumulativeOrdersAmount -
-                        filledOrdersCummulativeAmount)
+                        completedOrdersCummulativeAmount)
             ) return i;
         }
         assert(false);
@@ -210,48 +217,52 @@ contract OrderPool is IOrderPool {
         uint256 sufficientOrderIndex
     ) external onlyReversePool returns (uint256 amountARemainingUnswapped) {
         assert(
-            unfilledOrdersCummulativeAmount() >= filledOrdersCummulativeAmount
+            availableOrdersCummulativeAmount() >=
+                completedOrdersCummulativeAmount
         );
-        if (unfilledOrdersCummulativeAmount() == filledOrdersCummulativeAmount)
-            return amountA; // Empty Order Pool - all is unswapped
+        if (
+            availableOrdersCummulativeAmount() ==
+            completedOrdersCummulativeAmount
+        ) return amountA; // Empty Order Pool - all is unswapped
         if (
             amountA >
-            unfilledOrdersCummulativeAmount() - filledOrdersCummulativeAmount
+            availableOrdersCummulativeAmount() -
+                completedOrdersCummulativeAmount
         ) {
             // no need to require(sufficientOrderIndex == orders.length - 1) as another order may have usurped this
             sufficientOrderIndex = orders.length - 1;
             amountARemainingUnswapped =
-                (amountA + filledOrdersCummulativeAmount) -
-                unfilledOrdersCummulativeAmount(); // extra parenthesis intended
+                (amountA + completedOrdersCummulativeAmount) -
+                availableOrdersCummulativeAmount(); // extra parenthesis intended
             amountA =
-                unfilledOrdersCummulativeAmount() -
-                filledOrdersCummulativeAmount;
+                availableOrdersCummulativeAmount() -
+                completedOrdersCummulativeAmount;
         } // else amountARemainingUnswapped = 0;
         // At this point amountA can be filled (swapped)
         require(
             orders[sufficientOrderIndex].cumulativeOrdersAmount -
-                filledOrdersCummulativeAmount >=
+                completedOrdersCummulativeAmount >=
                 amountA,
             "OrderPool: sufficientOrderIndex too small"
         );
         require(
             sufficientOrderIndex == 0 ||
-                filledOrdersCummulativeAmount >=
+                completedOrdersCummulativeAmount >=
                 orders[sufficientOrderIndex - 1].cumulativeOrdersAmount ||
                 orders[sufficientOrderIndex - 1].cumulativeOrdersAmount -
-                    filledOrdersCummulativeAmount <
+                    completedOrdersCummulativeAmount <
                 amountA,
             "OrderPool: sufficientOrderIndex too large"
         );
         if (
             orders[sufficientOrderIndex].cumulativeOrdersAmount -
-                filledOrdersCummulativeAmount >
+                completedOrdersCummulativeAmount >
             amountA
         ) {
             // payout top order part immediately and adjust
             uint256 toRemainA = orders[sufficientOrderIndex]
                 .cumulativeOrdersAmount -
-                filledOrdersCummulativeAmount -
+                completedOrdersCummulativeAmount -
                 amountA;
             uint256 toPayOutA = orders[sufficientOrderIndex].amountAToSwap -
                 toRemainA;
@@ -266,7 +277,7 @@ contract OrderPool is IOrderPool {
             // At this point all orders up to and including sufficientOrderIndex-1 can withdraw
             // ... but order[sufficientOrderIndex] cannot since it was partially filled and paid out above
         }
-        filledOrdersCummulativeAmount += amountA;
+        completedOrdersCummulativeAmount += amountA;
         uint256 feeToProtocol = (amountA * FEE_TAKER_TO_PROTOCOL) / FEE_DENOM;
         feesToCollect += feeToProtocol;
         amountA -= feeToProtocol;
@@ -285,14 +296,14 @@ contract OrderPool is IOrderPool {
             orderRanges.push(OrderRange(sufficientOrderIndex, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
     }
 
-    /// To be called from UI read-only
     function rangeIndexSearch() internal view returns (uint256) {
+        // Note: msg.sender == msg.sender of the caller as this function is internal
         uint256 orderId = orderOwned[msg.sender];
         if (
             orderId == 0 ||
             orderRanges.length == 0 ||
             orderRanges[orderRanges.length - 1].highIndex < orderId
-        ) return type(uint256).max; // Not yet executed or non-exsistent
+        ) return type(uint256).max; // Not yet fully executed or non-exsistent
         if (orderRanges.length == 1) {
             assert(orderRanges[0].highIndex >= orderId);
             return 0;
@@ -307,6 +318,7 @@ contract OrderPool is IOrderPool {
         return 0; // Unreachable code
     }
 
+    /// To be called from UI read-only
     function orderStatus()
         external
         view
@@ -320,9 +332,11 @@ contract OrderPool is IOrderPool {
         if (orderId == 0) return (0, 0, type(uint256).max); // Non-existent
         rangeIndex = rangeIndexSearch();
         if (rangeIndex == type(uint256).max)
+            // Not yet fully executed
             remainingA = orders[orderId].amountAToSwap;
             // remainingB = 0 as initialized
         else {
+            // Fully executed
             // remainingA = 0 as initialized
             remainingB = convertAt(
                 orders[orderId].amountAToSwap,
@@ -336,20 +350,19 @@ contract OrderPool is IOrderPool {
 
     /// Withdraw both the filled and unfilled part of the order
     /// @param rangeIndex - the index of the range (in the array of ranges) of executed entries which contains the execution price. To be determined by calling rangeIndexSearch()
-    function withdraw(uint256 rangeIndex) external returns (uint256 amountB) {
+    function withdraw(uint256 rangeIndex) external {
         uint256 orderId = orderOwned[msg.sender];
         require(orderId != 0, "OrderPool: Non existent order");
         if (rangeIndex == type(uint256).max) {
             // Has not executed, or executed partially and paid out the executed value
             // Withdraw remaining unexecuted amount
-            // !!! not allowed as it would trow off the calculations of available capital
-            // safeTransfer(
-            //     tokenA,
-            //     msg.sender,
-            //     orders[orderId].amountAToSwap
-            // );
-            // Also would have to re-calculate unfilledOrdersCummulativeAmount
-            revert("OrderPool: Not allowed");
+            console.log("withdraw unexecuted xfer");
+            safeTransfer(tokenA, msg.sender, orders[orderId].amountAToSwap);
+            completedOrdersCummulativeAmount += orders[orderId].amountAToSwap;
+            // Adjust cumulativeOrdersAmount on orders issued later than this one
+            for (uint256 i = orderId+1; i<orders.length; i++) 
+                if (address(0) != orders[i].owner) 
+                    orders[i].cumulativeOrdersAmount -= orders[orderId].amountAToSwap;
         } else {
             // Executed - pay out counter-value
             require(
@@ -357,12 +370,15 @@ contract OrderPool is IOrderPool {
                     orderRanges[rangeIndex - 1].highIndex < orderId) &&
                     orderRanges[rangeIndex].highIndex >= orderId
             );
-            amountB = convertAt(
-                orders[orderId].amountAToSwap,
-                orderRanges[rangeIndex].executionPrice
-            );
             console.log("withdraw xfer");
-            reversePool.proxyTransfer(tokenB, msg.sender, amountB);
+            reversePool.proxyTransfer(
+                tokenB,
+                msg.sender,
+                convertAt(
+                    orders[orderId].amountAToSwap,
+                    orderRanges[rangeIndex].executionPrice
+                )
+            );
             console.log("withdraw xfer fees");
             safeTransfer(
                 tokenA,
@@ -374,7 +390,10 @@ contract OrderPool is IOrderPool {
         }
         orders[orderId].amountAToSwap = 0; // In either case above; redundant but safe
         // Wipe order
-        delete orders[orderId]; // Get gas credit
+        if (orderId == orders.length-1) 
+            orders.pop();
+        else 
+            delete orders[orderId]; // Get gas credit
         orderOwned[msg.sender] = 0; // To avoid unnecessary exhaustive searches
     }
 
@@ -386,7 +405,7 @@ contract OrderPool is IOrderPool {
             OrderType(
                 msg.sender,
                 amountA,
-                unfilledOrdersCummulativeAmount() + amountA
+                availableOrdersCummulativeAmount() + amountA
             )
         );
     }

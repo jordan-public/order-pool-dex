@@ -1,4 +1,10 @@
+- Write test for withdrawal and test
+- Adjust "Withdraw" button conditions and amounts available for withdrawal display in Body.js
+
 - UI: moving pair price and showing stats and liquidity
 - Bid/offer remove functionality
 - 2-sided order pool
+- fee withdrawal on-th-fly calculation
 - command line utilities for fee witdrawal and stats
+
+- Find solution to avoid re-trials for wrong sufficientOrderIndex

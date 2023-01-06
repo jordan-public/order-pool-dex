@@ -56,7 +56,7 @@ interface IOrderPool {
             uint256 rangeIndex
         );
 
-    function withdraw(uint256 rangeIndex) external returns (uint256 amountB);
+    function withdraw(uint256 rangeIndex) external;
 
     function feesToCollect() external view returns (uint256);
 

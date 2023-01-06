@@ -94,6 +94,19 @@ contract OrderPoolTest is Test {
         );
     }
 
+    function testMakeWithdrawUnexecuted() public {
+        {
+            vm.startPrank(account1);
+            JETH.approve(address(pool), type(uint256).max);
+            uint256 a = 2 * 10**18;
+            uint256 s = pool.sufficientOrderIndexSearch(a);
+            pool.swap(a, s); // Make (deposit)
+            pool.withdraw(type(uint256).max);
+            vm.stopPrank();
+        }
+
+    }
+
     function testSwap0() public {
         {
             vm.startPrank(account1);
@@ -110,6 +123,33 @@ contract OrderPoolTest is Test {
             uint256 a = 100 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
             reversePool.swap(a, s);
+            vm.stopPrank();
+        }
+    }
+
+    function testSwap0WithdrawAll() public {
+        {   // Maker
+            vm.startPrank(account1);
+            JETH.approve(address(pool), type(uint256).max);
+            uint256 a = 2 * 10**18;
+            uint256 s = pool.sufficientOrderIndexSearch(a);
+            pool.swap(a, s);
+            vm.stopPrank();
+        }
+
+        {   // Taker
+            vm.startPrank(account3);
+            JUSD.approve(address(reversePool), type(uint256).max);
+            uint256 a = 100 * 10**18;
+            uint256 s = reversePool.sufficientOrderIndexSearch(a);
+            reversePool.swap(a, s);
+            vm.stopPrank();
+        }
+
+        {
+            vm.startPrank(account1);
+            (,, uint256 rangeIndex) = pool.orderStatus();
+            pool.withdraw(rangeIndex);
             vm.stopPrank();
         }
     }

@@ -1,3 +1,5 @@
+# Run anvil.sh in another shell before running this
+
 # To load the variables in the .env file
 source .env
 
