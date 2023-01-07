@@ -151,13 +151,10 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
         }
     }
     
-    const onWithdraw = async () => {
-        if (!orderStatus || !orderStatusReverse) return;
-    console.log("orderStatus.rangeIndex", orderStatus.rangeIndex.toString());
-    console.log("orderStatusReverse.rangeIndex", orderStatusReverse.rangeIndex.toString());
-        if (orderStatus.rangeIndex.eq(ethers.constants.MaxUint256) && orderStatusReverse.rangeIndex.eq(ethers.constants.MaxUint256)) return;
+    const onWithdraw = async (reverse) => {
+        if (!reverse && !orderStatus || reverse && !orderStatusReverse) return;
         try {
-            const tx = (!orderStatus.rangeIndex.eq(ethers.constants.MaxUint256))? 
+            const tx = (!reverse)? 
                 await orderPool.withdraw(orderStatus.rangeIndex):
                 await reverseOrderPool.withdraw(orderStatusReverse.rangeIndex);
 
@@ -224,13 +221,42 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
                                 Uncollected executed amount of {pair.SymbolA} amount: {orderStatusReverse && uint256ToDecimal(orderStatusReverse.remainingB, tokenADecimals)}
                             </>}
                         </>}
-                        {orderStatus && orderStatusReverse &&
-                         (orderStatus.remainingB.gt(BigNumber.from(0)) || orderStatusReverse.remainingB.gt(BigNumber.from(0))) &&
+                        {orderStatus && (orderStatus.remainingB.gt(BigNumber.from(0)) || orderStatus.remainingA.gt(BigNumber.from(0))) &&
+                            <><br/>This order in this pool:</>
+                        }
+                        {orderStatus && orderStatus.remainingB.gt(BigNumber.from(0)) &&
                             <InputGroup className="mb-3">
-                                <InputGroup.Text>Unclaimed: {orderStatus.remainingB.gt(BigNumber.from(0))?pair.SymbolB:pair.SymbolA}
+                                <InputGroup.Text>Unclaimed executed: {pair.SymbolB}
                                 </InputGroup.Text>
-                                <Form.Control readOnly={true} value={orderStatus.remainingB.gt(BigNumber.from(0))?uint256ToDecimal(orderStatus.remainingB, tokenBDecimals):uint256ToDecimal(orderStatusReverse.remainingB, tokenADecimals)}/>
-                                <Button variant="success" onClick={onWithdraw}>Withdraw</Button>
+                                <Form.Control readOnly={true} value={uint256ToDecimal(orderStatus.remainingB, tokenBDecimals)}/>
+                                <Button variant="success" onClick={()=>onWithdraw(false)}>Withdraw</Button>
+                            </InputGroup>
+                        }
+                        {orderStatus && orderStatus.remainingA.gt(BigNumber.from(0)) &&
+                            <InputGroup className="mb-3">
+                                <InputGroup.Text>Waiting to execute: {pair.SymbolA}
+                                </InputGroup.Text>
+                                <Form.Control readOnly={true} value={uint256ToDecimal(orderStatus.remainingA, tokenADecimals)}/>
+                                <Button variant="success" onClick={()=>onWithdraw(false)}>Withdraw</Button>
+                            </InputGroup>
+                        }
+                        {orderStatusReverse && (orderStatusReverse.remainingB.gt(BigNumber.from(0)) || orderStatusReverse.remainingA.gt(BigNumber.from(0))) &&
+                            <><br/>This order in the reverse pool:</>
+                        }
+                        {orderStatusReverse && orderStatusReverse.remainingB.gt(BigNumber.from(0)) &&
+                            <InputGroup className="mb-3">
+                                <InputGroup.Text>Unclaimed executed: {pair.SymbolA}
+                                </InputGroup.Text>
+                                <Form.Control readOnly={true} value={uint256ToDecimal(orderStatusReverse.remainingB, tokenADecimals)}/>
+                                <Button variant="success" onClick={()=>onWithdraw(true)}>Withdraw</Button>
+                            </InputGroup>
+                        }
+                        {orderStatusReverse && orderStatusReverse.remainingA.gt(BigNumber.from(0)) &&
+                            <InputGroup className="mb-3">
+                                <InputGroup.Text>Waiting to execute: {pair.SymbolB}
+                                </InputGroup.Text>
+                                <Form.Control readOnly={true} value={uint256ToDecimal(orderStatusReverse.remainingA, tokenBDecimals)}/>
+                                <Button variant="success" onClick={()=>onWithdraw(true)}>Withdraw</Button>
                             </InputGroup>
                         }
                         <br/>

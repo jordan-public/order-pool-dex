@@ -358,7 +358,6 @@ contract OrderPool is IOrderPool {
             // Withdraw remaining unexecuted amount
             console.log("withdraw unexecuted xfer");
             safeTransfer(tokenA, msg.sender, orders[orderId].amountAToSwap);
-            completedOrdersCummulativeAmount += orders[orderId].amountAToSwap;
             // Adjust cumulativeOrdersAmount on orders issued later than this one
             for (uint256 i = orderId+1; i<orders.length; i++) 
                 if (address(0) != orders[i].owner) 
