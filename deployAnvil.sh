@@ -11,4 +11,7 @@ forge script script/DeployAnvil.s.sol:Deploy --rpc-url "http://127.0.0.1:8545/" 
 
 rm web/src/artifacts/*.json
 
-source push_artifacts.sh
+source push_artifacts.sh "DeployAnvil.s.sol/5"
+
+# cd web
+# npm run build
