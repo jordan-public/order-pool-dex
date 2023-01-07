@@ -3,8 +3,7 @@ cache/
 out/
 bin/
 
-broadcast/Deploy.s.sol/*/*
-!broadcast/Deploy.s.sol/*/run-latest.json
+broadcast/DeployAnvil.s.sol/*/*
 broadcast/DeployMumbai.s.sol/*/*
 !broadcast/DeployMumbai.s.sol/*/run-latest.json
 # Ignores development broadcast logs
