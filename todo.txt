@@ -1,7 +1,7 @@
 - Allow makers on 2-sides in order pool
 - Allow multiple simultaneous orders per user
 - fee withdrawal on-th-fly calculation
-- command line utilities for fee witdrawal and stats
-- Fix WalletConnect signup
+- command line utilities for fee withdrawal and stats
+- Fix WalletConnect sign-up
 
 - Find solution to avoid re-trials for wrong sufficientOrderIndex
