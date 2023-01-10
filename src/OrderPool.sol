@@ -60,6 +60,13 @@ contract OrderPool is IOrderPool {
         _;
     }
 
+    modifier onlyEOA() {
+        // This may cause a problem with Account Abstraction (see: https://eips.ethereum.org/EIPS/eip-4337)
+        // but apparently this will be an optional feature.
+        require(msg.sender == tx.origin, "OrderPool: Cannot call from contract");
+        _;
+    }
+
     modifier onlyReversePool() {
         require(msg.sender == address(reversePool), "OrderPool: Unauthorized");
         _;
@@ -215,7 +222,7 @@ contract OrderPool is IOrderPool {
         uint256 amountA,
         address payTo,
         uint256 sufficientOrderIndex
-    ) external onlyReversePool returns (uint256 amountARemainingUnswapped) {
+    ) external onlyReversePool /* onlyEOA */ returns (uint256 amountARemainingUnswapped) {
         assert(
             availableOrdersCummulativeAmount() >=
                 completedOrdersCummulativeAmount
@@ -350,7 +357,7 @@ contract OrderPool is IOrderPool {
 
     /// Withdraw both the filled and unfilled part of the order
     /// @param rangeIndex - the index of the range (in the array of ranges) of executed entries which contains the execution price. To be determined by calling rangeIndexSearch()
-    function withdraw(uint256 rangeIndex) external {
+    function withdraw(uint256 rangeIndex) external onlyEOA {
         uint256 orderId = orderOwned[msg.sender];
         require(orderId != 0, "OrderPool: Non existent order");
         if (rangeIndex == type(uint256).max) {
@@ -398,7 +405,7 @@ contract OrderPool is IOrderPool {
 
     /// Called only for the amount which cannot be swapped immediately
     /// @param amountA - the amount to be plaved in the pool as maker
-    function make(uint256 amountA) internal {
+    function make(uint256 amountA) internal /* no need for onlyEOA as it only increases liquidity */ {
         orderOwned[msg.sender] = orders.length;
         orders.push(
             OrderType(
@@ -414,7 +421,7 @@ contract OrderPool is IOrderPool {
     /// @param sufficientOrderIndex - the index of the order which along with the lower indexed orders can fill the maximim amount possible.
     ///     Use sufficientOrderIndexSearch() to determine this value.
     /// See swapImmediately()
-    function swap(uint256 amountA, uint256 sufficientOrderIndex) public {
+    function swap(uint256 amountA, uint256 sufficientOrderIndex) public onlyEOA {
         console.log("swap xfer in");
         safeTransferFrom(tokenA, msg.sender, address(this), amountA);
         make(
