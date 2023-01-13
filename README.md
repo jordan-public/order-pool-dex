@@ -69,6 +69,12 @@ The owner **cannot**:
 - Change the ChainLink oracle used.
 - Withdraw any funds other than the protocol fees.
 
+In order to prevent flash loan attacks, contracts cannot:
+- Be takers on Order Pool DEX.
+- Withdraw previously deposited funds as makers.
+
+However, contracts can act as makers, welcome to increase the liquidity of the market. This also presents and opportunity for automated participants to act as market makers.
+
 ## Future Work
 
 To allow order cancellations, the execution should be divided in "epochs". Orders should should be withdrawn regardless of their execution status at the end of the epoch. 
