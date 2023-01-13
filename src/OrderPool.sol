@@ -63,7 +63,10 @@ contract OrderPool is IOrderPool {
     modifier onlyEOA() {
         // This may cause a problem with Account Abstraction (see: https://eips.ethereum.org/EIPS/eip-4337)
         // but apparently this will be an optional feature.
-        require(msg.sender == tx.origin, "OrderPool: Cannot call from contract");
+        require(
+            msg.sender == tx.origin,
+            "OrderPool: Cannot call from contract"
+        );
         _;
     }
 
@@ -222,7 +225,11 @@ contract OrderPool is IOrderPool {
         uint256 amountA,
         address payTo,
         uint256 sufficientOrderIndex
-    ) external onlyReversePool /* onlyEOA */ returns (uint256 amountARemainingUnswapped) {
+    )
+        external
+        onlyReversePool /* onlyEOA */
+        returns (uint256 amountARemainingUnswapped)
+    {
         assert(
             availableOrdersCummulativeAmount() >=
                 completedOrdersCummulativeAmount
@@ -366,9 +373,10 @@ contract OrderPool is IOrderPool {
             console.log("withdraw unexecuted xfer");
             safeTransfer(tokenA, msg.sender, orders[orderId].amountAToSwap);
             // Adjust cumulativeOrdersAmount on orders issued later than this one
-            for (uint256 i = orderId+1; i<orders.length; i++) 
-                if (address(0) != orders[i].owner) 
-                    orders[i].cumulativeOrdersAmount -= orders[orderId].amountAToSwap;
+            for (uint256 i = orderId + 1; i < orders.length; i++)
+                if (address(0) != orders[i].owner)
+                    orders[i].cumulativeOrdersAmount -= orders[orderId]
+                        .amountAToSwap;
         } else {
             // Executed - pay out counter-value
             require(
@@ -396,16 +404,17 @@ contract OrderPool is IOrderPool {
         }
         orders[orderId].amountAToSwap = 0; // In either case above; redundant but safe
         // Wipe order
-        if (orderId == orders.length-1) 
-            orders.pop();
-        else 
-            delete orders[orderId]; // Get gas credit
+        if (orderId == orders.length - 1) orders.pop();
+        else delete orders[orderId]; // Get gas credit
         orderOwned[msg.sender] = 0; // To avoid unnecessary exhaustive searches
     }
 
     /// Called only for the amount which cannot be swapped immediately
     /// @param amountA - the amount to be plaved in the pool as maker
-    function make(uint256 amountA) internal /* no need for onlyEOA as it only increases liquidity */ {
+    function make(uint256 amountA)
+        internal
+    /* no need for onlyEOA as it only increases liquidity */
+    {
         orderOwned[msg.sender] = orders.length;
         orders.push(
             OrderType(
@@ -421,18 +430,27 @@ contract OrderPool is IOrderPool {
     /// @param sufficientOrderIndex - the index of the order which along with the lower indexed orders can fill the maximim amount possible.
     ///     Use sufficientOrderIndexSearch() to determine this value.
     /// See swapImmediately()
-    function swap(uint256 amountA, uint256 sufficientOrderIndex) public onlyEOA {
+    function swap(
+        uint256 amountA,
+        bool taker,
+        bool maker,
+        uint256 sufficientOrderIndex
+    ) public onlyEOA {
+        require(taker || maker, "OrderPool: Must be taker or maker");
         console.log("swap xfer in");
         safeTransferFrom(tokenA, msg.sender, address(this), amountA);
-        make(
-            reversePool.convert(
+        uint256 unswapped;
+        if (taker)
+            unswapped = reversePool.convert(
                 reversePool.swapImmediately(
                     convert(amountA),
                     msg.sender,
                     sufficientOrderIndex
                 )
-            )
-        );
+            );
+        else unswapped = amountA;
+        if (maker) make(unswapped);
+        else if (unswapped > 0) safeTransfer(tokenA, msg.sender, unswapped);
     }
 
     function withdrawFees(address payTo)

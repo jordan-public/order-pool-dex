@@ -100,7 +100,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s); // Make (deposit)
+            pool.swap(a, true, true, s); // Make (deposit)
             pool.withdraw(type(uint256).max);
             vm.stopPrank();
         }
@@ -113,7 +113,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s);
+            pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -122,7 +122,7 @@ contract OrderPoolTest is Test {
             JUSD.approve(address(reversePool), type(uint256).max);
             uint256 a = 100 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
-            reversePool.swap(a, s);
+            reversePool.swap(a, true, true, s);
             vm.stopPrank();
         }
     }
@@ -133,7 +133,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s);
+            pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -142,7 +142,7 @@ contract OrderPoolTest is Test {
             JUSD.approve(address(reversePool), type(uint256).max);
             uint256 a = 100 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
-            reversePool.swap(a, s);
+            reversePool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -160,7 +160,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s);
+            pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -169,7 +169,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s);
+            pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -178,7 +178,7 @@ contract OrderPoolTest is Test {
             JUSD.approve(address(reversePool), type(uint256).max);
             uint256 a = 3000 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
-            reversePool.swap(a, s);
+            reversePool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -187,7 +187,7 @@ contract OrderPoolTest is Test {
             JUSD.approve(address(reversePool), type(uint256).max);
             uint256 a = 3000 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
-            reversePool.swap(a, s);
+            reversePool.swap(a, true, true, s);
             vm.stopPrank();
         }
     }
@@ -198,7 +198,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s);
+            pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -207,7 +207,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s);
+            pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -216,7 +216,7 @@ contract OrderPoolTest is Test {
             JUSD.approve(address(reversePool), type(uint256).max);
             uint256 a = 3000 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
-            reversePool.swap(a, s);
+            reversePool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -232,7 +232,7 @@ contract OrderPoolTest is Test {
             JUSD.approve(address(reversePool), type(uint256).max);
             uint256 a = 3000 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
-            reversePool.swap(a, s);
+            reversePool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -250,7 +250,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s);
+            pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -259,7 +259,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s);
+            pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -268,7 +268,7 @@ contract OrderPoolTest is Test {
             JUSD.approve(address(reversePool), type(uint256).max);
             uint256 a = 3000 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
-            reversePool.swap(a, s);
+            reversePool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -278,7 +278,7 @@ contract OrderPoolTest is Test {
             uint256 a = 100 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
             console.log("sufficientOrderIndexSearch %s", s);
-            reversePool.swap(a, s);
+            reversePool.swap(a, true, true, s);
             vm.stopPrank();
         }
     }
@@ -289,7 +289,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s);
+            pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -298,7 +298,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s);
+            pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -307,7 +307,7 @@ contract OrderPoolTest is Test {
             JUSD.approve(address(reversePool), type(uint256).max);
             uint256 a = 3000 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
-            reversePool.swap(a, s);
+            reversePool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -323,7 +323,7 @@ contract OrderPoolTest is Test {
             JUSD.approve(address(reversePool), type(uint256).max);
             uint256 a = 3000 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
-            reversePool.swap(a, s);
+            reversePool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -339,7 +339,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, s);
+            pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 

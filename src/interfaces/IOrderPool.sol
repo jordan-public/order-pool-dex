@@ -45,7 +45,12 @@ interface IOrderPool {
         uint256 sufficientOrderIndex
     ) external returns (uint256 amountRemainingUnswapped);
 
-    function swap(uint256 amountA, uint256 sufficientOrderIndex) external;
+    function swap(
+        uint256 amountA,
+        bool taker,
+        bool maker,
+        uint256 sufficientOrderIndex
+    ) external;
 
     function orderStatus()
         external

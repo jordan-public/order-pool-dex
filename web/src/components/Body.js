@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 import React from 'react';
-import { Container, Row, Col, Card, Form, InputGroup, Button, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, InputGroup, Button, ToggleButton, Spinner } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.css'; 
 import { BigNumber, ethers } from 'ethers';
 import aIOrderPool from '../artifacts/IOrderPool.json';
@@ -16,6 +16,8 @@ function Body({provider, address, pair}) {
     const [tokenADecimals, setTokenADecimals] = React.useState(null);
     const [tokenBDecimals, setTokenBDecimals] = React.useState(null);
 
+    const [maker, setMaker] = React.useState(true);
+    const [taker, setTaker] = React.useState(true);
     const [amountA, setAmountA] = React.useState(BigNumber.from(0));
     const [estAmountB, setEstAmountB] = React.useState(BigNumber.from(0));
     const [estProtocolFee, setEstProtocolFee] = React.useState("");
@@ -42,11 +44,11 @@ function Body({provider, address, pair}) {
             setTokenADecimals(tokenADec);
             const tokenBDec = await cTokenB.decimals();
             setTokenBDecimals(tokenBDec);
-            await doUpdate(amountA, p, r, tokenADec, tokenBDec);
+            await doUpdate(amountA, taker, maker, p, r, tokenADec, tokenBDec);
         }) ();
     }, [provider, address, pair]); // On load
 
-    const doUpdate = async (amtA, p, r, tokenADec, tokenBDec) => {
+    const doUpdate = async (amtA, tkr, mkr, p, r, tokenADec, tokenBDec) => {
         if (!tokenADec || !tokenBDec) return;
         const ps = await p.poolSize();
         setPoolSizeA(ps);
@@ -54,8 +56,8 @@ function Body({provider, address, pair}) {
         setPoolSizeB(rs);
         const estAmtB = await p.convert(amtA);
         setEstAmountB(estAmtB);
-        const t = rs.gte(estAmtB) ? estAmtB : rs;
-        const m = estAmtB.gt(rs) ? estAmtB.sub(rs) : BigNumber.from(0);
+        const t = !tkr ? BigNumber.from(0) : (rs.gte(estAmtB) ? estAmtB : rs);
+        const m = !mkr ? BigNumber.from(0) : estAmtB.sub(t);
         setEstProtocolFee(uint256ToDecimal(t.mul(BigNumber.from(5)).div(BigNumber.from(10000)), tokenBDec));
 console.log("m: ", m, " t: ", t);
         const tmf = (t.gt(m)) ?
@@ -69,7 +71,7 @@ console.log("m: ", m, " t: ", t);
 
     const onUpdate = async (blockNumber) => {
 console.log(blockNumber, tokenADecimals, tokenBDecimals);
-        await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
+        await doUpdate(amountA, taker, maker, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
     }
 
     React.useEffect(() => {
@@ -111,7 +113,7 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
         else
             a = BigNumber.from(decimalToUint256(parseFloat(e.currentTarget.value), tokenADecimals));
         setAmountA(a);
-        await doUpdate(a, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
+        await doUpdate(a, taker, maker, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
     }
 
     const assureAuthorized = async () => {
@@ -139,10 +141,10 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
             !orderStatusReverse.remainingA.isZero() || !orderStatusReverse.remainingB.isZero()) return;
         if (await assureAuthorized() === 0) return;
         try {
-            const tx = await orderPool.swap(amountA, sufficientOrderIndex, {gasLimit: 10000000});
+            const tx = await orderPool.swap(amountA, taker, maker, sufficientOrderIndex, {gasLimit: 10000000});
 
             const r = await tx.wait();
-            await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
+            await doUpdate(amountA, taker, maker, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
             window.alert('Completed. Block hash: ' + r.blockHash);        
         } catch(e) {
             console.log("Error: ", e);
@@ -159,13 +161,35 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
                 await reverseOrderPool.withdraw(orderStatusReverse.rangeIndex);
 
             const r = await tx.wait();
-            await doUpdate(amountA, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
+            await doUpdate(amountA, taker, maker, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals);
             window.alert('Completed. Block hash: ' + r.blockHash);        
         } catch(e) {
             console.log("Error: ", e);
             window.alert(e.message + "\n" + (e.data?e.data.message:""));
             return;
         }
+    }
+
+    const onChangeTaker = async (e) => {
+        const t = e.currentTarget.checked;
+        setTaker(t);
+        let m = maker;
+        if (!t) {
+            m = true;
+            setMaker(m);
+        }
+        await doUpdate(amountA, t, m, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals)
+    }
+
+    const onChangeMaker = async (e) => {
+        const m = e.currentTarget.checked;
+        setMaker(m);
+        let t = taker;
+        if (!m) {
+            t = true;
+            setTaker(t);
+        }
+        await doUpdate(amountA, t, m, orderPool, reverseOrderPool, tokenADecimals, tokenBDecimals)
     }
 
     if (!provider || !pair ) return(<></>);
@@ -190,6 +214,10 @@ console.log(blockNumber, tokenADecimals, tokenBDecimals);
                             <InputGroup className="mb-3">
                                 <InputGroup.Text>Amount: {pair.SymbolA}</InputGroup.Text>
                                 <Form.Control type="number" onChange={onChangeAmount}/>
+                                <ToggleButton id="tkr" type="checkbox" variant="primary-outline" value="1" checked={taker} 
+                                    onChange={onChangeTaker}>Take</ToggleButton>
+                                <ToggleButton id="mkr" type="checkbox" variant="primary-outline" value="1" checked={maker} 
+                                    onChange={onChangeMaker}>Make</ToggleButton>
                                 <Button variant="primary" onClick={onSwap}>Swap -></Button>
                             </InputGroup>
                             <br/>
