@@ -349,6 +349,42 @@ contract OrderPoolTest is Test {
             reversePool.withdraw(rangeIndex);
             vm.stopPrank();
         }
-
     }
+
+    function test2MakersAndWithdraw() public {
+        { // 1 swamakerps
+            vm.startPrank(account1, account1);
+            JETH.approve(address(pool), type(uint256).max);
+            uint256 a = 2 * 10**18;
+            uint256 s = pool.sufficientOrderIndexSearch(a);
+            pool.swap(a, false, true, s);
+            vm.stopPrank();
+        }
+
+        { // 2 maker - reverse
+            vm.startPrank(account2, account2);
+            JUSD.approve(address(reversePool), type(uint256).max);
+            uint256 a = 3000 * 10**18;
+            uint256 s = reversePool.sufficientOrderIndexSearch(a);
+            reversePool.swap(a, false, true, s);
+            vm.stopPrank();
+        }
+
+        { // 1 withdraws
+            vm.startPrank(account1, account1);
+            (, uint256 remainingB, uint256 rangeIndex) = pool.orderStatus();
+            assertEq(remainingB, 0);
+            pool.withdraw(rangeIndex);
+            vm.stopPrank();
+        }
+
+        { // 2 withdraws
+            vm.startPrank(account2, account2);
+            (, uint256 remainingB, uint256 rangeIndex) = reversePool.orderStatus();
+            assertEq(remainingB, 0);
+            reversePool.withdraw(rangeIndex);
+            vm.stopPrank();
+        }
+    }
+
 }
