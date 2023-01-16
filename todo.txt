@@ -1,4 +1,3 @@
-- Allow makers on 2-sides in order pool
 - Allow multiple simultaneous orders per user
 - fee withdrawal on-th-fly calculation
 - command line utilities for fee withdrawal and stats
