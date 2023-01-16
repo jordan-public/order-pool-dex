@@ -50,9 +50,9 @@ interface IOrderPool {
         bool taker,
         bool maker,
         uint256 sufficientOrderIndex
-    ) external;
+    ) external returns (uint orderId);
 
-    function orderStatus()
+    function orderStatus(uint256 orderId)
         external
         view
         returns (
@@ -61,7 +61,7 @@ interface IOrderPool {
             uint256 rangeIndex
         );
 
-    function withdraw(uint256 rangeIndex) external;
+    function withdraw(uint256 orderId, uint256 rangeIndex) external;
 
     function feesToCollect() external view returns (uint256);
 

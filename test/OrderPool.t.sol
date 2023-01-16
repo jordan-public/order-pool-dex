@@ -100,8 +100,8 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, true, true, s); // Make (deposit)
-            pool.withdraw(type(uint256).max);
+            uint256 orderId = pool.swap(a, true, true, s); // Make (deposit)
+            pool.withdraw(orderId, type(uint256).max);
             vm.stopPrank();
         }
 
@@ -128,12 +128,13 @@ contract OrderPoolTest is Test {
     }
 
     function testSwap0WithdrawAll() public {
+        uint256 orderId;
         {   // Maker
             vm.startPrank(account1, account1);
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, true, true, s);
+            orderId = pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -148,8 +149,8 @@ contract OrderPoolTest is Test {
 
         {
             vm.startPrank(account1, account1);
-            (,, uint256 rangeIndex) = pool.orderStatus();
-            pool.withdraw(rangeIndex);
+            (,, uint256 rangeIndex) = pool.orderStatus(orderId);
+            pool.withdraw(orderId, rangeIndex);
             vm.stopPrank();
         }
     }
@@ -193,12 +194,14 @@ contract OrderPoolTest is Test {
     }
 
     function testSwap1Withdraw() public {
+        uint256 order1Id;
+        uint256 order2Id;
         { // 1 swaps
             vm.startPrank(account1, account1);
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, true, true, s);
+            order1Id = pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -207,7 +210,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, true, true, s);
+            order2Id = pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -222,8 +225,8 @@ contract OrderPoolTest is Test {
 
         { // 1 withdraws
             vm.startPrank(account1, account1);
-            (,, uint256 rangeIndex) = pool.orderStatus();
-            pool.withdraw(rangeIndex);
+            (,, uint256 rangeIndex) = pool.orderStatus(order1Id);
+            pool.withdraw(order1Id, rangeIndex);
             vm.stopPrank();
         }
 
@@ -238,8 +241,8 @@ contract OrderPoolTest is Test {
 
         { // 2 withdraws
             vm.startPrank(account2, account2);
-            (,, uint256 rangeIndex) = pool.orderStatus();
-            pool.withdraw(rangeIndex);
+            (,, uint256 rangeIndex) = pool.orderStatus(order2Id);
+            pool.withdraw(order2Id, rangeIndex);
             vm.stopPrank();
         }
     }
@@ -284,12 +287,15 @@ contract OrderPoolTest is Test {
     }
 
     function testSwap3Withdraw() public {
+        uint256 order1Id;
+        uint256 order2Id;
+        uint256 order4Id;
         { // 1 swaps
             vm.startPrank(account1, account1);
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, true, true, s);
+            order1Id = pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -298,7 +304,7 @@ contract OrderPoolTest is Test {
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, true, true, s);
+            order2Id = pool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
@@ -313,8 +319,8 @@ contract OrderPoolTest is Test {
 
         { // 1 withdraws
             vm.startPrank(account1, account1);
-            (,, uint256 rangeIndex) = pool.orderStatus();
-            pool.withdraw(rangeIndex);
+            (,, uint256 rangeIndex) = pool.orderStatus(order1Id);
+            pool.withdraw(order1Id, rangeIndex);
             vm.stopPrank();
         }
 
@@ -323,14 +329,14 @@ contract OrderPoolTest is Test {
             JUSD.approve(address(reversePool), type(uint256).max);
             uint256 a = 3000 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
-            reversePool.swap(a, true, true, s);
+            order4Id = reversePool.swap(a, true, true, s);
             vm.stopPrank();
         }
 
         { // 2 withdraws
             vm.startPrank(account2, account2);
-            (,, uint256 rangeIndex) = pool.orderStatus();
-            pool.withdraw(rangeIndex);
+            (,, uint256 rangeIndex) = pool.orderStatus(order2Id);
+            pool.withdraw(order2Id, rangeIndex);
             vm.stopPrank();
         }
 
@@ -345,19 +351,21 @@ contract OrderPoolTest is Test {
 
         { // 4 withdraws
             vm.startPrank(account4, account4);
-            (,, uint256 rangeIndex) = reversePool.orderStatus();
-            reversePool.withdraw(rangeIndex);
+            (,, uint256 rangeIndex) = reversePool.orderStatus(order4Id);
+            reversePool.withdraw(order4Id, rangeIndex);
             vm.stopPrank();
         }
     }
 
     function test2MakersAndWithdraw() public {
+        uint256 order1Id;
+        uint256 order2Id;
         { // 1 swamakerps
             vm.startPrank(account1, account1);
             JETH.approve(address(pool), type(uint256).max);
             uint256 a = 2 * 10**18;
             uint256 s = pool.sufficientOrderIndexSearch(a);
-            pool.swap(a, false, true, s);
+            order1Id = pool.swap(a, false, true, s);
             vm.stopPrank();
         }
 
@@ -366,23 +374,23 @@ contract OrderPoolTest is Test {
             JUSD.approve(address(reversePool), type(uint256).max);
             uint256 a = 3000 * 10**18;
             uint256 s = reversePool.sufficientOrderIndexSearch(a);
-            reversePool.swap(a, false, true, s);
+            order2Id = reversePool.swap(a, false, true, s);
             vm.stopPrank();
         }
 
         { // 1 withdraws
             vm.startPrank(account1, account1);
-            (, uint256 remainingB, uint256 rangeIndex) = pool.orderStatus();
+            (, uint256 remainingB, uint256 rangeIndex) = pool.orderStatus(order1Id);
             assertEq(remainingB, 0);
-            pool.withdraw(rangeIndex);
+            pool.withdraw(order1Id, rangeIndex);
             vm.stopPrank();
         }
 
         { // 2 withdraws
             vm.startPrank(account2, account2);
-            (, uint256 remainingB, uint256 rangeIndex) = reversePool.orderStatus();
+            (, uint256 remainingB, uint256 rangeIndex) = reversePool.orderStatus(order2Id);
             assertEq(remainingB, 0);
-            reversePool.withdraw(rangeIndex);
+            reversePool.withdraw(order2Id, rangeIndex);
             vm.stopPrank();
         }
     }
