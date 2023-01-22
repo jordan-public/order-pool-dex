@@ -39,7 +39,7 @@ function SideBar({provider,  address, setPair}) {
         }) ();
     }, [provider, address]); // On load
 
-    if (!provider) return;
+    if (!provider) return <></>;
     return (<div className="d-grid gap-2">
         <br/>
         {pairList.map((p) => <Button key={p.pair} size="sm" onClick={()=>setPair(p)}>{p.SymbolA}/{p.SymbolB}</Button>)}

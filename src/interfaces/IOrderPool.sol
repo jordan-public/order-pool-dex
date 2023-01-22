@@ -12,6 +12,10 @@ interface IOrderPool {
 
     function setReverse(IOrderPool _reversePool) external;
 
+    function numOrdersOwned() external view returns (uint256);
+
+    function getOrderId(uint256 index) external view returns(uint256);
+
     function isPriceFeedInverse() external view returns (bool);
 
     function poolSize() external view returns (uint256);

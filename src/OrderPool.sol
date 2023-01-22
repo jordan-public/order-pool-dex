@@ -35,6 +35,15 @@ contract OrderPool is IOrderPool {
     mapping(uint256 => uint256) public orderIndexes; // Index of the order in the array ordersOwned[owner]
     uint256 completedOrdersCummulativeAmount; // filled or withdrawn
 
+    function numOrdersOwned() external view returns (uint256) {
+        return ordersOwned[msg.sender].length;
+    }
+
+    function getOrderId(uint256 index) external view returns(uint256) {
+        if (index >= ordersOwned[msg.sender].length) return 0; // Non-existent
+        return ordersOwned[msg.sender][index];
+    }
+
     function availableOrdersCummulativeAmount()
         internal
         view
