@@ -12,6 +12,10 @@ interface IOrderPool {
 
     function setReverse(IOrderPool _reversePool) external;
 
+    function numOrdersOwned() external view returns (uint256);
+
+    function getOrderId(uint256 index) external view returns(uint256);
+
     function isPriceFeedInverse() external view returns (bool);
 
     function poolSize() external view returns (uint256);
@@ -50,9 +54,9 @@ interface IOrderPool {
         bool taker,
         bool maker,
         uint256 sufficientOrderIndex
-    ) external;
+    ) external returns (uint orderId);
 
-    function orderStatus()
+    function orderStatus(uint256 orderId)
         external
         view
         returns (
@@ -61,7 +65,7 @@ interface IOrderPool {
             uint256 rangeIndex
         );
 
-    function withdraw(uint256 rangeIndex) external;
+    function withdraw(uint256 orderId, uint256 rangeIndex) external;
 
     function feesToCollect() external view returns (uint256);
 

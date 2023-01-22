@@ -31,8 +31,18 @@ contract OrderPool is IOrderPool {
     }
 
     OrderType[] public orders;
-    mapping(address => uint256) public orderOwned;
+    mapping(address => uint256[]) public ordersOwned;
+    mapping(uint256 => uint256) public orderIndexes; // Index of the order in the array ordersOwned[owner]
     uint256 completedOrdersCummulativeAmount; // filled or withdrawn
+
+    function numOrdersOwned() external view returns (uint256) {
+        return ordersOwned[msg.sender].length;
+    }
+
+    function getOrderId(uint256 index) external view returns(uint256) {
+        if (index >= ordersOwned[msg.sender].length) return 0; // Non-existent
+        return ordersOwned[msg.sender][index];
+    }
 
     function availableOrdersCummulativeAmount()
         internal
@@ -310,9 +320,8 @@ contract OrderPool is IOrderPool {
             orderRanges.push(OrderRange(sufficientOrderIndex, uint256(price))); // So the counter-parties can determine the swap price at the time of withdrawal.
     }
 
-    function rangeIndexSearch() internal view returns (uint256) {
+    function rangeIndexSearch(uint256 orderId) internal view returns (uint256) {
         // Note: msg.sender == msg.sender of the caller as this function is internal
-        uint256 orderId = orderOwned[msg.sender];
         if (
             orderId == 0 ||
             orderRanges.length == 0 ||
@@ -333,7 +342,7 @@ contract OrderPool is IOrderPool {
     }
 
     /// To be called from UI read-only
-    function orderStatus()
+    function orderStatus(uint256 orderId)
         external
         view
         returns (
@@ -342,9 +351,8 @@ contract OrderPool is IOrderPool {
             uint256 rangeIndex
         )
     {
-        uint256 orderId = orderOwned[msg.sender];
         if (orderId == 0) return (0, 0, type(uint256).max); // Non-existent
-        rangeIndex = rangeIndexSearch();
+        rangeIndex = rangeIndexSearch(orderId);
         if (rangeIndex == type(uint256).max)
             // Not yet fully executed
             remainingA = orders[orderId].amountAToSwap;
@@ -364,9 +372,10 @@ contract OrderPool is IOrderPool {
 
     /// Withdraw both the filled and unfilled part of the order
     /// @param rangeIndex - the index of the range (in the array of ranges) of executed entries which contains the execution price. To be determined by calling rangeIndexSearch()
-    function withdraw(uint256 rangeIndex) external onlyEOA {
-        uint256 orderId = orderOwned[msg.sender];
-        require(orderId != 0, "OrderPool: Non existent order");
+    function withdraw(uint256 orderId, uint256 rangeIndex) external onlyEOA {
+        require(orderId != 0 && orderId < orders.length, "OrderPool: Non existent order");
+        require(orders[orderId].owner == msg.sender, "OrderPool: Not owner");
+        assert(ordersOwned[msg.sender].length > orderIndexes[orderId] && orderId == ordersOwned[msg.sender][orderIndexes[orderId]]);
         if (rangeIndex == type(uint256).max) {
             // Has not executed, or executed partially and paid out the executed value
             // Withdraw remaining unexecuted amount
@@ -406,7 +415,13 @@ contract OrderPool is IOrderPool {
         // Wipe order
         if (orderId == orders.length - 1) orders.pop();
         else delete orders[orderId]; // Get gas credit
-        orderOwned[msg.sender] = 0; // To avoid unnecessary exhaustive searches
+        // To avoid unnecessary exhaustive searches, remove the order from the msg.sener's ordersOwned
+        if (ordersOwned[msg.sender].length != orderIndexes[orderId] + 1) { // Reuse slot in array
+            ordersOwned[msg.sender][orderIndexes[orderId]] = ordersOwned[msg.sender][ordersOwned[msg.sender].length-1];
+            orderIndexes[ordersOwned[msg.sender].length-1] = orderIndexes[orderId];
+        }
+        // orderIndexes[orderId] = 0; - no need, just discard it
+        ordersOwned[msg.sender].pop();
     }
 
     /// Called only for the amount which cannot be swapped immediately
@@ -414,8 +429,11 @@ contract OrderPool is IOrderPool {
     function make(uint256 amountA)
         internal
     /* no need for onlyEOA as it only increases liquidity */
+        returns (uint256 orderId)
     {
-        orderOwned[msg.sender] = orders.length;
+        orderId = orders.length;
+        orderIndexes[orderId] = ordersOwned[msg.sender].length;
+        ordersOwned[msg.sender].push(orderId);
         orders.push(
             OrderType(
                 msg.sender,
@@ -435,7 +453,7 @@ contract OrderPool is IOrderPool {
         bool taker,
         bool maker,
         uint256 sufficientOrderIndex
-    ) public onlyEOA {
+    ) public onlyEOA returns (uint256 orderId) {
         require(taker || maker, "OrderPool: Must be taker or maker");
         console.log("swap xfer in");
         safeTransferFrom(tokenA, msg.sender, address(this), amountA);
@@ -449,7 +467,7 @@ contract OrderPool is IOrderPool {
                 )
             );
         else unswapped = amountA;
-        if (maker) make(unswapped);
+        if (maker) orderId = make(unswapped);
         else if (unswapped > 0) safeTransfer(tokenA, msg.sender, unswapped);
     }
 
