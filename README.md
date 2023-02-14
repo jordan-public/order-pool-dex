@@ -8,7 +8,7 @@
 
 ## Demo
 
-For demo see the [demo](/demo/READMR.md) folder.
+For demo see the [demo](/demo/README.md) folder.
 
 ## What it does
 **Order Pool DEX** allows the users to exchange one fungible asset for another.
