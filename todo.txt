@@ -1,5 +1,6 @@
+- Handle wrong chain (chainId) or contract not deployed
+
 - fee withdrawal on-th-fly calculation
 - command line utilities for fee withdrawal and stats
-- Fix WalletConnect sign-up
 
 - Find solution to avoid re-trials for wrong sufficientOrderIndex
