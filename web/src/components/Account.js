@@ -11,28 +11,31 @@ function Account({provider, setProvider, address, setAddress}) {
 
     React.useEffect(() => {
         if (!window.ethereum) return;
-        window.ethereum.on("connect", info => console.log("Connected: ", info) );
-        window.ethereum.on('accountsChanged', accounts => { 
+        const onConnect = info => console.log("Connected: ", info);
+        window.ethereum.on("connect",  onConnect);
+        const onAaccountsChanged = accounts => { 
             if (accounts && accounts.length > 0)
                 setAddress(accounts[0].toLowerCase())
             else
                 setAddress(null);
-        });
-        window.ethereum.on('chainChanged', chainId => window.location.reload() );
-        window.ethereum.on('disconnect', async (error: { code: number; message: string }) => {
+        };
+        window.ethereum.on('accountsChanged', onAaccountsChanged);
+        const onChainChanged = chainId => window.location.reload();
+        window.ethereum.on('chainChanged', onChainChanged);
+        const onDisconnect = async (error: { code: number; message: string }) => {
             console.log("Disconnected: ", error);
             setNetwork(null);
             setAddress(null);
             setProvider(null);
             if (web3Modal) await web3Modal.clearCachedProvider();
-        });
-        // return () => {
-        //     // Add references to original functions, not re-writes
-        //     window.ethereum.removeListener("connect", info => console.log(info) );
-        //     window.ethereum.removeListener('accountsChanged', accounts => setAddress(accounts[0].toLowerCase()) );
-        //     window.ethereum.removeListener('chainChanged', chainId => window.location.reload() );
-        //     window.ethereum.removeListener('disconnect', (error: { code: number; message: string }) => console.log(error) );
-        //     }
+        };
+        window.ethereum.on('disconnect', onDisconnect);
+        return () => {
+            window.ethereum.removeListener("connect", onConnect);
+            window.ethereum.removeListener('accountsChanged', onAaccountsChanged );
+            window.ethereum.removeListener('chainChanged', onChainChanged );
+            window.ethereum.removeListener('disconnect', onDisconnect);
+        }
     }, []);
 
     const onConnect = async () => {
