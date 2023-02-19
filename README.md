@@ -85,7 +85,7 @@ To install:
 - Install the Foundry tool set.
 - Clone this project from GitHub.
 - Build the project using the command "foundry build".
-- In the "web" subfolder, install the node modules using the command "node install".
+- In the "web" subfolder, install the node modules using the command "pnpm install".
 - To install the contracts in the main folder run "./deploy.sh". 
 
 To test and debug:
@@ -94,5 +94,5 @@ To test and debug:
 - To debug, if necessary, edit the failing test name in "debug.sh" and then run it using the command "./debug.sh".
 
 To run:
-- Start the web application by issuing the following command in the web folder "npm start". 
+- Start the web application by issuing the following command in the web folder "pnpm start". 
 - Access the web application at http://localhost:3000.
