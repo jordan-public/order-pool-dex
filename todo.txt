@@ -1,3 +1,4 @@
+- WalletConnect transactions still try to use MetaMask
 - Handle wrong chain (chainId) or contract not deployed
 
 - fee withdrawal on-th-fly calculation
