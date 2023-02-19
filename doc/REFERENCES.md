@@ -9,3 +9,6 @@ https://stackoverflow.com/questions/60618844/react-hooks-useeffect-is-called-twi
 
 Web3Modal (WalletConnect, MetaMask) setup:
 https://blog.openreplay.com/multiple-electronic-wallets-in-react-with-web3modal/
+
+Webpack 5, Polyfill problem solution:
+https://stackoverflow.com/questions/73042033/you-attempted-to-import-node-modules-console-browserify-index-js-which-falls
