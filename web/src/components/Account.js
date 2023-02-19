@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from 'react-bootstrap';
 import { ethers } from "ethers";
 import Web3Modal from "web3modal";
-import WalletConnectProvider from '@walletconnect/ethereum-provider';
+import WalletConnectProvider from '@walletconnect/web3-provider';
 
 function Account({provider, setProvider, address, setAddress}) {
     const [network, setNetwork] = React.useState(null);
@@ -44,10 +44,11 @@ function Account({provider, setProvider, address, setAddress}) {
             const walletConnectEthereum = {
               package: WalletConnectProvider,
               options: {
-                bridge: process.env.ROPSTEN_BRIDGE,
-                //bridge: 'http://127.0.0.1:8545/',
-                infuraId: process.env.ROPSTEN_INFURA_ID,
-                rpc: {},
+                rpc: {
+                    5: "http://127.0.0.1:8545/",
+                    137: "https://rpc-mainnet.matic.network",
+                    80001: "https://matic-mumbai.chainstacklabs.com",
+                },
               },
             };
             providerOptions.walletconnect = walletConnectEthereum;
